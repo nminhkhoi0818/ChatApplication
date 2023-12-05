@@ -124,7 +124,8 @@ public class ServerWorker extends Thread {
             String login = tokens[1];
             String password = tokens[2];
 
-            if ((login.equals("guest") && password.equals("guest")) || (login.equals("khoi") && password.equals("khoi"))) {
+            if ((login.equals("guest") && password.equals("guest")) || (login.equals("khoi") && password.equals("khoi"))
+                    || (login.equals("test") && password.equals("test"))) {
                 String msg = "ok login\n";
                 outputStream.write(msg.getBytes());
                 this.login = login;

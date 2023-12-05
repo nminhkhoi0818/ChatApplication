@@ -47,11 +47,9 @@ public class ChatClient {
             System.out.println("Connect successful");
             if (client.login("guest", "guest")) {
                 System.out.println("Login successfully");
-                client.msg("khoi", "hello");
             } else {
                 System.err.println("Login failed");
             }
-            // client.logoff();
         }
     }
 

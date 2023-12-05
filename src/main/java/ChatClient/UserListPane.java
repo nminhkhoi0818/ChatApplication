@@ -52,7 +52,6 @@ public class UserListPane extends JPanel implements UserStatusListener {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
     }
 
