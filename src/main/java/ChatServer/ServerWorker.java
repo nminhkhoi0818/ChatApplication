@@ -123,14 +123,12 @@ public class ServerWorker extends Thread {
         if (tokens.length == 3) {
             String login = tokens[1];
             String password = tokens[2];
-
-            if ((login.equals("guest") && password.equals("guest")) || (login.equals("khoi") && password.equals("khoi"))
-                    || (login.equals("test") && password.equals("test"))) {
+            if (checkValidLogin(login, password)) {
+                System.out.println("Hello");
                 String msg = "ok login\n";
                 outputStream.write(msg.getBytes());
                 this.login = login;
                 System.out.println("User logged in successfully " + login);
-
 
                 List<ServerWorker> workerList = server.getWorkerList();
 
@@ -157,6 +155,26 @@ public class ServerWorker extends Thread {
                 System.err.println("Login failed for " + login);
             }
         }
+    }
+
+    private boolean checkValidLogin(String login, String password) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(new File("assets/auth.txt")));
+            String line;
+            while((line = br.readLine()) != null) {
+                String[] data = line.split("`");
+                if (data.length == 2) {
+                    if (login.equals(data[0]) && password.equals(data[1])) {
+                        br.close();
+                        return true;
+                    }
+                }
+            }
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     private void send(String msg) throws IOException {

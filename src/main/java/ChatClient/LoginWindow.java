@@ -9,23 +9,18 @@ import java.io.IOException;
 public class LoginWindow extends JFrame {
     private final ChatClient client;
     private static boolean userListCreated = false;
+
+    JLabel userLabel = new JLabel("Username");
+    JLabel passwordLabel = new JLabel("Password");
     JTextField loginField = new JTextField();
     JPasswordField passwordField = new JPasswordField();
     JButton loginButton = new JButton("Login");
+    JButton registerButton = new JButton("Register");
+    RegisterWindow registerWindow;
 
     public LoginWindow() throws IOException {
-        super("Login");
-
         this.client = new ChatClient("localhost", 8818);
         this.client.connect();
-
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.add(loginField);
-        p.add(passwordField);
-        p.add(loginButton);
 
         loginButton.addActionListener(new ActionListener() {
             @Override
@@ -38,9 +33,31 @@ public class LoginWindow extends JFrame {
             }
         });
 
-        getContentPane().add(p, BorderLayout.CENTER);
+        registerButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                LoginWindow.this.setVisible(false);
+                if (registerWindow == null) {
+                    try {
+                        registerWindow = new RegisterWindow();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
 
-        pack();
+        setLayout(new GridLayout(3, 2, 5, 5));
+        add(userLabel);
+        add(loginField);
+        add(passwordLabel);
+        add(passwordField);
+        add(loginButton);
+        add(registerButton);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setTitle("Login");
+        setSize(300, 150);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
     }
 
@@ -49,16 +66,9 @@ public class LoginWindow extends JFrame {
         String password = passwordField.getText();
 
         if (client.login(login, password)) {
-            // Bring up the user list window
-            UserListPane userListPane = new UserListPane(client);
-            JFrame frame = new JFrame("User List");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(400, 600);
-            frame.getContentPane().add(userListPane, BorderLayout.CENTER);
-            frame.setVisible(true);
-
+            // Navigate to chat window
+            ChatWindow chatWindow = new ChatWindow();
             setVisible(false);
-
         } else {
             JOptionPane.showMessageDialog(this, "Invalid login/password");
         }
@@ -67,11 +77,8 @@ public class LoginWindow extends JFrame {
     public static void main(String[] args) throws IOException {
         LoginWindow loginWindow = new LoginWindow();
         loginWindow.setVisible(true);
-
-        LoginWindow loginWindow2 = new LoginWindow();
-        loginWindow2.setVisible(true);
-
-        LoginWindow loginWindow3 = new LoginWindow();
-        loginWindow3.setVisible(true);
+//
+//        LoginWindow loginWindow2 = new LoginWindow();
+//        loginWindow2.setVisible(true);
     }
 }
