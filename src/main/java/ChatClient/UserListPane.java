@@ -8,12 +8,14 @@ import java.io.IOException;
 public class UserListPane extends JPanel implements UserStatusListener {
     private final ChatClient client;
     private JList<String> userListUI;
-
     private DefaultListModel<String> userListModel;
 
-    public UserListPane(ChatClient client) {
+    private ChatWindow chatWindow;
+
+    public UserListPane(ChatClient client, ChatWindow chatWindow) {
         this.client = client;
         this.client.addUserStatusListener(this);
+        this.chatWindow = chatWindow;
 
         userListModel = new DefaultListModel<>();
         userListUI = new JList<>(userListModel);
@@ -25,34 +27,10 @@ public class UserListPane extends JPanel implements UserStatusListener {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() > 1) {
                     String login = userListUI.getSelectedValue();
-                    MessagePane messagePane = new MessagePane(client, login);
-
-                    JFrame f = new JFrame("Message: " + login);
-                    f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                    f.setSize(500, 500);
-                    f.getContentPane().add(messagePane, BorderLayout.CENTER);
-                    f.setVisible(true);
+                    chatWindow.showMessagePane(login);
                 }
             }
         });
-    }
-
-    public static void main(String[] args) throws IOException {
-        ChatClient client = new ChatClient("localhost", 8818);
-        UserListPane userListPane = new UserListPane(client);
-        JFrame frame = new JFrame("User List");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 600);
-        frame.getContentPane().add(userListPane, BorderLayout.CENTER);
-        frame.setVisible(true);
-
-        if (client.connect()) {
-            try {
-                client.login("guest", "guest");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     @Override

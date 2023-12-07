@@ -2,29 +2,38 @@ package ChatClient;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Objects;
 
 public class ChatWindow extends JFrame {
+    ChatClient client;
+    String login;
     JPanel sideBar;
     JLabel userInfo;
-    DefaultListModel onlineUserModel;
-    JList<String> onlineList;
+    UserListPane userListPane;
     JButton logoffButton;
     JButton createGroupButton;
     // Sidebar
     JPanel mainContent;
     JLabel chattingWith;
-    TextField messageArea;
-    TextField messageSend;
+    CardLayout cardLayout;
+    JPanel cardPanel;
 
-    JButton sendButton;
-    JButton fileButton;
-    ChatWindow() {
+    ArrayList<MessagePane> messagePanes;
+
+    ChatWindow(String login, ChatClient client) {
+        this.client = client;
+        this.login = login;
         // Sidebar
         sideBar = new JPanel(new BorderLayout());
-        userInfo = new JLabel("<html>Username: Minh Khoi<br>Port: 8818</html>");
-        onlineUserModel = new DefaultListModel();
-        onlineList = new JList<>(onlineUserModel);
-        logoffButton = new JButton("Logoff");
+        userInfo = new JLabel("<html>Username: " + login + "<br>Port: " + client.getServerPort()+ "</html>");
+        userListPane = new UserListPane(client, this);
+
+        logoffButton = new JButton("Log Off");
         createGroupButton = new JButton("Create Group");
         JPanel buttonSideBarPanel = new JPanel(new GridLayout(2, 1, 0, 5));
         buttonSideBarPanel.add(logoffButton);
@@ -32,28 +41,16 @@ public class ChatWindow extends JFrame {
 
         sideBar.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
         sideBar.add(userInfo, BorderLayout.NORTH);
-        sideBar.add(new JScrollPane(onlineList), BorderLayout.CENTER);
+        sideBar.add(userListPane, BorderLayout.CENTER);
         sideBar.add(buttonSideBarPanel, BorderLayout.SOUTH);
 
         // Main content
         mainContent = new JPanel(new BorderLayout());
-        chattingWith = new JLabel("Guest");
-        messageArea = new TextField();
-        messageArea.setEnabled(false);
-        messageSend = new TextField();
-        sendButton = new JButton("Send");
-        fileButton = new JButton("File");
-        JPanel inputPanel = new JPanel(new BorderLayout());
-        inputPanel.add(messageSend, BorderLayout.CENTER);
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
-        buttonPanel.add(sendButton);
-        buttonPanel.add(fileButton);
-        inputPanel.add(buttonPanel, BorderLayout.EAST);
+        chattingWith = new JLabel("");
 
         mainContent.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
         mainContent.add(chattingWith, BorderLayout.NORTH);
-        mainContent.add(new JScrollPane(messageArea), BorderLayout.CENTER);
-        mainContent.add(inputPanel, BorderLayout.SOUTH);
+        addAllMessagePanes();
 
         setLayout(new BorderLayout());
         add(sideBar, BorderLayout.WEST);
@@ -67,7 +64,35 @@ public class ChatWindow extends JFrame {
         this.setVisible(true);
     }
 
-    public static void main(String[] args) {
-        new ChatWindow();
+    public void addAllMessagePanes() {
+        messagePanes = new ArrayList<MessagePane>();
+        cardLayout = new CardLayout();
+        cardPanel = new JPanel(cardLayout);
+        mainContent.add(cardPanel, BorderLayout.CENTER);
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(new File("assets/auth.txt")));
+            String line;
+            while((line = br.readLine()) != null) {
+                String[] data = line.split("`");
+                if (!Objects.equals(login, data[0])) {
+                    MessagePane messagePane = new MessagePane(client, data[0]);
+                    messagePanes.add(messagePane);
+                    cardPanel.add(messagePane, data[0]);
+                }
+            }
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showMessagePane(String login) {
+        for (MessagePane messagePane : messagePanes) {
+            if (login.equals(messagePane.getLogin())) {
+                chattingWith.setText(login);
+                cardLayout.show(cardPanel, login);
+            }
+        }
     }
 }

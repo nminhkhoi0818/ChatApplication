@@ -12,16 +12,29 @@ public class MessagePane extends JPanel implements MessageListener {
     private DefaultListModel<String> listModel = new DefaultListModel<>();
     private JList<String> messageList = new JList<>(listModel);
     private JTextField inputField = new JTextField();
+    JButton sendButton;
+    JButton fileButton;
+
+    public String getLogin() {
+        return login;
+    }
 
     public MessagePane(ChatClient client, String login) {
-        this.client = client;
         this.login = login;
-
+        this.client = client;
         client.addMessageListener(this);
-
         setLayout(new BorderLayout());
         add(new JScrollPane(messageList), BorderLayout.CENTER);
-        add(inputField, BorderLayout.SOUTH);
+
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        sendButton = new JButton("Send");
+        fileButton = new JButton("File");
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
+        buttonPanel.add(sendButton);
+        buttonPanel.add(fileButton);
+        inputPanel.add(inputField, BorderLayout.CENTER);
+        inputPanel.add(buttonPanel, BorderLayout.EAST);
+        add(inputPanel, BorderLayout.SOUTH);
 
         inputField.addActionListener(new ActionListener() {
             @Override
@@ -40,6 +53,7 @@ public class MessagePane extends JPanel implements MessageListener {
 
     @Override
     public void onMessage(String fromLogin, String msgBody) {
+        // Check if send to the current user
         if (login.equalsIgnoreCase(fromLogin)) {
             String line = fromLogin + ": " + msgBody;
             listModel.addElement(line);

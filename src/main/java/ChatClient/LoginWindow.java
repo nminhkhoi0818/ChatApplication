@@ -8,8 +8,6 @@ import java.io.IOException;
 
 public class LoginWindow extends JFrame {
     private final ChatClient client;
-    private static boolean userListCreated = false;
-
     JLabel userLabel = new JLabel("Username");
     JLabel passwordLabel = new JLabel("Password");
     JTextField loginField = new JTextField();
@@ -67,7 +65,8 @@ public class LoginWindow extends JFrame {
 
         if (client.login(login, password)) {
             // Navigate to chat window
-            ChatWindow chatWindow = new ChatWindow();
+            ChatWindow chatWindow = new ChatWindow(login, client);
+            client.startMessageReader();
             setVisible(false);
         } else {
             JOptionPane.showMessageDialog(this, "Invalid login/password");
@@ -77,8 +76,5 @@ public class LoginWindow extends JFrame {
     public static void main(String[] args) throws IOException {
         LoginWindow loginWindow = new LoginWindow();
         loginWindow.setVisible(true);
-//
-//        LoginWindow loginWindow2 = new LoginWindow();
-//        loginWindow2.setVisible(true);
     }
 }
