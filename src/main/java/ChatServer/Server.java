@@ -11,8 +11,15 @@ public class Server extends Thread {
 
     private ArrayList<ServerWorker> workerList = new ArrayList<>();
 
+    private DatabaseHelper databaseHelper;
+
+    public DatabaseHelper getDatabaseHelper() {
+        return databaseHelper;
+    }
+
     public Server(int serverPort) {
         this.serverPort = serverPort;
+        this.databaseHelper = new DatabaseHelper();
     }
 
     public List<ServerWorker> getWorkerList() {

@@ -2,6 +2,8 @@ package ChatServer;
 
 import java.io.*;
 import java.net.Socket;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.SplittableRandom;
@@ -24,12 +26,12 @@ public class ServerWorker extends Thread {
             handleClientSocket(clientSocket);
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void handleClientSocket(Socket clientSocket) throws IOException, InterruptedException {
+    private void handleClientSocket(Socket clientSocket) throws IOException, InterruptedException, SQLException {
         InputStream inputStream = clientSocket.getInputStream();
         this.outputStream = clientSocket.getOutputStream();
 
@@ -37,7 +39,7 @@ public class ServerWorker extends Thread {
         String line;
         while ((line = reader.readLine()) != null) {
             String[] tokens = line.split(" ");
-            if (tokens != null && tokens.length > 0) {
+            if (tokens.length > 0) {
                 String cmd = tokens[0];
                 if ("logoff".equalsIgnoreCase(cmd) || "quit".equalsIgnoreCase(cmd)) {
                     handleLogoff();
@@ -51,6 +53,8 @@ public class ServerWorker extends Thread {
                     handleJoin(tokens);
                 } else if ("leave".equalsIgnoreCase(cmd)) {
                     handleLeave(tokens);
+                } else if ("history".equalsIgnoreCase(cmd)) {
+                    handleMessageHistory(tokens);
                 }
                 else {
                     String msg = "unknown " + cmd + "\n";
@@ -59,6 +63,22 @@ public class ServerWorker extends Thread {
             }
         }
         clientSocket.close();
+    }
+
+    private void handleMessageHistory(String[] tokens) throws SQLException, IOException {
+        String sender = tokens[1];
+        String receiver = tokens[2];
+        List<String> chatHistory = server.getDatabaseHelper().getChatHistory(sender, receiver);
+
+        List<ServerWorker> workerList = server.getWorkerList();
+        for (ServerWorker worker : workerList) {
+            if (sender.equalsIgnoreCase(worker.getLogin())) {
+                for (String msg : chatHistory) {
+                    String outMsg = "history " + receiver + " " + msg + "\n";
+                    worker.send(outMsg);
+                }
+            }
+        }
     }
 
     private void handleLeave(String[] tokens) {
@@ -96,6 +116,7 @@ public class ServerWorker extends Thread {
                 if (sendTo.equalsIgnoreCase(worker.getLogin())) {
                     String outMsg = "msg " + login + " " + body + "\n";
                     worker.send(outMsg);
+                    server.getDatabaseHelper().insertMessage(login, sendTo, body);
                 }
             }
         }

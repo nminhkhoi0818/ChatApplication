@@ -19,9 +19,10 @@ public class MessagePane extends JPanel implements MessageListener {
         return login;
     }
 
-    public MessagePane(ChatClient client, String login) {
+    public MessagePane(ChatClient client, String login) throws IOException {
         this.login = login;
         this.client = client;
+        handleMessageHistory();
         client.addMessageListener(this);
         setLayout(new BorderLayout());
         add(new JScrollPane(messageList), BorderLayout.CENTER);
@@ -51,11 +52,17 @@ public class MessagePane extends JPanel implements MessageListener {
         });
     }
 
+    private void handleMessageHistory() throws IOException {
+        client.getMessageHistory(client.getLogin(), login);
+    }
+
+
     @Override
     public void onMessage(String fromLogin, String msgBody) {
         // Check if send to the current user
         if (login.equalsIgnoreCase(fromLogin)) {
             String line = fromLogin + ": " + msgBody;
+            System.out.println();
             listModel.addElement(line);
         }
     }

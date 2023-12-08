@@ -7,12 +7,16 @@ import java.util.ArrayList;
 public class ChatClient {
     private final String serverName;
     private final int serverPort;
-
     private Socket socket;
     private OutputStream serverOut;
-
     private InputStream serverIn;
     private BufferedReader bufferedIn;
+
+    private String login;
+
+    public String getLogin() {
+        return login;
+    }
 
     public ArrayList<UserStatusListener> getUserStatusListeners() {
         return (ArrayList<UserStatusListener>) userStatusListeners;
@@ -27,8 +31,6 @@ public class ChatClient {
     }
 
     public void msg(String sendTo, String msgBody) throws IOException {
-        System.out.println(sendTo);
-        System.out.println(msgBody);
         String cmd = "msg " + sendTo + " " + msgBody + "\n";
         serverOut.write(cmd.getBytes());
     }
@@ -41,6 +43,7 @@ public class ChatClient {
         System.out.println("Response Line: " + response);
 
         if ("ok login".equalsIgnoreCase(response)) {
+            this.login = login;
             return true;
         } else {
             return false;
@@ -66,6 +69,7 @@ public class ChatClient {
         try {
             String line;
             while ((line = bufferedIn.readLine()) != null) {
+                System.out.println(line);
                 String[] tokens = line.split(" ");
                 if (tokens.length > 0) {
                     String cmd = tokens[0];
@@ -76,11 +80,22 @@ public class ChatClient {
                     } else if ("msg".equalsIgnoreCase(cmd)) {
                         String[] tokensMsg = line.split(" ", 3);
                         handleMessage(tokensMsg);
+                    } else if ("history".equalsIgnoreCase(cmd)) {
+                        String[] historyMsg = line.split(" ", 3);
+                        handleHistoryMessage(historyMsg);
                     }
                 }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void handleHistoryMessage(String[] tokensMsg) {
+        String login = tokensMsg[1];
+        String msgBody = tokensMsg[2];
+        for (MessageListener listener : messageListeners) {
+            listener.onMessage(login, msgBody);
         }
     }
 
@@ -138,5 +153,10 @@ public class ChatClient {
 
     public void removeMessageListener(MessageListener listener) {
         messageListeners.remove(listener);
+    }
+
+    public void getMessageHistory(String sender, String receiver) throws IOException {
+        String cmd = "history " + sender + " " + receiver + "\n";
+        serverOut.write(cmd.getBytes());;
     }
 }
