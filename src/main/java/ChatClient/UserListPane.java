@@ -49,7 +49,9 @@ public class UserListPane extends JPanel implements UserStatusListener {
     public void getAllUser() throws IOException {
         List<String> users = client.getUsers(client.getLogin());
         for (String user : users) {
-            userListModel.addElement(user);
+            if (!user.equalsIgnoreCase(client.getLogin())) {
+                userListModel.addElement(user);
+            }
         }
     }
 }

@@ -69,22 +69,6 @@ public class ServerWorker extends Thread {
         clientSocket.close();
     }
 
-    private void handleMessageHistory(String[] tokens) throws SQLException, IOException {
-        String sender = tokens[1];
-        String receiver = tokens[2];
-        List<String> chatHistory = server.getDatabaseHelper().getChatHistory(sender, receiver);
-
-        List<ServerWorker> workerList = server.getWorkerList();
-        for (ServerWorker worker : workerList) {
-            if (sender.equalsIgnoreCase(worker.getLogin())) {
-                for (String msg : chatHistory) {
-                    String outMsg = "history " + receiver + " " + msg + "\n";
-                    worker.send(outMsg);
-                }
-            }
-        }
-    }
-
     private void handleLeave(String[] tokens) {
         if (tokens.length > 1) {
             String topic = tokens[1];
@@ -156,25 +140,25 @@ public class ServerWorker extends Thread {
                 this.login = login;
                 System.out.println("User logged in successfully " + login);
 
-                List<ServerWorker> workerList = server.getWorkerList();
-
-                // send current user all other online logins
-                for (ServerWorker worker : workerList) {
-                    if (worker.getLogin() != null) {
-                        if (!login.equals(worker.getLogin())) {
-                            String msg2 = "online " + worker.getLogin() + "\n";
-                            send(msg2);
-                        }
-                    }
-                }
-
-                // send other online users current user's status
-                String onlineMsg = "online " + login + "\n";
-                for (ServerWorker worker : workerList) {
-                    if (!login.equals(worker.getLogin())) {
-                        worker.send(onlineMsg);
-                    }
-                }
+//                List<ServerWorker> workerList = server.getWorkerList();
+//
+//                // send current user all other online logins
+//                for (ServerWorker worker : workerList) {
+//                    if (worker.getLogin() != null) {
+//                        if (!login.equals(worker.getLogin())) {
+//                            String msg2 = "online " + worker.getLogin() + "\n";
+//                            send(msg2);
+//                        }
+//                    }
+//                }
+//
+//                // send other online users current user's status
+//                String onlineMsg = "online " + login + "\n";
+//                for (ServerWorker worker : workerList) {
+//                    if (!login.equals(worker.getLogin())) {
+//                        worker.send(onlineMsg);
+//                    }
+//                }
             } else {
                 String msg = "error login";
                 outputStream.write(msg.getBytes());
@@ -212,6 +196,24 @@ public class ServerWorker extends Thread {
         if (allUsers != null) {
             String userListMsg = "users " + tokens[1] + " " + String.join(" ", allUsers) + "\n";
             outputStream.write(userListMsg.getBytes());
+        }
+        databaseHelper.close();
+    }
+
+    private void handleMessageHistory(String[] tokens) throws SQLException, IOException {
+        String sender = tokens[1];
+        String receiver = tokens[2];
+        DatabaseHelper databaseHelper = new DatabaseHelper();
+        List<String> chatHistory = databaseHelper.getChatHistory(sender, receiver);
+
+        List<ServerWorker> workerList = server.getWorkerList();
+        for (ServerWorker worker : workerList) {
+            if (sender.equalsIgnoreCase(worker.getLogin())) {
+                for (String msg : chatHistory) {
+                    String outMsg = "history " + receiver + " " + msg + "\n";
+                    worker.send(outMsg);
+                }
+            }
         }
         databaseHelper.close();
     }

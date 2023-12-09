@@ -93,7 +93,7 @@ public class DatabaseHelper {
                     String messageReceiver = resultSet.getString("receiver");
                     String messageBody = resultSet.getString("message");
 
-                    String formattedMessage = String.format("%s %s %s", messageSender, messageReceiver, messageBody);
+                    String formattedMessage = String.format("%s %s", messageSender, messageBody);
                     messages.add(formattedMessage);
                 }
             }
@@ -131,7 +131,19 @@ public class DatabaseHelper {
         }
     }
 
+    public void clearTableData(String tableName) {
+        String sql = "DELETE FROM " + tableName;
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql);
+            System.out.println("All data from " + tableName + " has been cleared.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String args[]) {
-        new DatabaseHelper();
+
+        DatabaseHelper databaseHelper = new DatabaseHelper();
+        databaseHelper.clearTableData("messages");
     }
 }

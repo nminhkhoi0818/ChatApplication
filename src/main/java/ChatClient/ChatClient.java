@@ -67,11 +67,10 @@ public class ChatClient {
         serverOut.write(cmd.getBytes());
 
         String response = bufferedIn.readLine();
-        System.out.println(response);
         String[] tokens = response.split(" ");
         if (tokens.length > 1) {
             List<String> users = new ArrayList<>();
-            for (int i = 3; i < tokens.length; i++) {
+            for (int i = 2; i < tokens.length; i++) {
                 users.add(tokens[i]);
             }
             return users;
@@ -109,8 +108,8 @@ public class ChatClient {
                         String[] tokensMsg = line.split(" ", 3);
                         handleMessage(tokensMsg);
                     } else if ("history".equalsIgnoreCase(cmd)) {
-                        String[] historyMsg = line.split(" ", 3);
-                        handleHistoryMessage(historyMsg);
+                        String[] tokensMsg = line.split(" ", 3);
+                        handleHistoryMessage(tokensMsg);
                     }
                 }
             }
@@ -123,8 +122,9 @@ public class ChatClient {
     private void handleHistoryMessage(String[] tokensMsg) {
         String login = tokensMsg[1];
         String msgBody = tokensMsg[2];
+        System.out.println(tokensMsg);
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody);
+            listener.onMessage(login, msgBody, true);
         }
     }
 
@@ -132,7 +132,7 @@ public class ChatClient {
         String login = tokensMsg[1];
         String msgBody = tokensMsg[2];
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody);
+            listener.onMessage(login, msgBody, false);
         }
     }
 

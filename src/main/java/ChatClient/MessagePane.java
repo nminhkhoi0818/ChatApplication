@@ -22,7 +22,6 @@ public class MessagePane extends JPanel implements MessageListener {
     public MessagePane(ChatClient client, String login) throws IOException {
         this.login = login;
         this.client = client;
-        handleMessageHistory();
         client.addMessageListener(this);
         setLayout(new BorderLayout());
         add(new JScrollPane(messageList), BorderLayout.CENTER);
@@ -36,15 +35,18 @@ public class MessagePane extends JPanel implements MessageListener {
         inputPanel.add(inputField, BorderLayout.CENTER);
         inputPanel.add(buttonPanel, BorderLayout.EAST);
         add(inputPanel, BorderLayout.SOUTH);
+        client.getMessageHistory(client.getLogin(), login);
 
         inputField.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
                     String text = inputField.getText();
-                    client.msg(login, text);
-                    listModel.addElement("You: " + text);
-                    inputField.setText("");
+                    if (!text.isEmpty()) {
+                        client.msg(login, text);
+                        listModel.addElement(client.getLogin() + ": " + text);
+                        inputField.setText("");
+                    }
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
@@ -52,18 +54,27 @@ public class MessagePane extends JPanel implements MessageListener {
         });
     }
 
-    private void handleMessageHistory() throws IOException {
-        client.getMessageHistory(client.getLogin(), login);
-    }
-
-
     @Override
-    public void onMessage(String fromLogin, String msgBody) {
+    public void onMessage(String fromLogin, String msgBody, boolean history) {
         // Check if send to the current user
-        if (login.equalsIgnoreCase(fromLogin)) {
-            String line = fromLogin + ": " + msgBody;
-            System.out.println();
-            listModel.addElement(line);
+        if (history) {
+            if (login.equalsIgnoreCase(fromLogin)) {
+                String[] msg =  msgBody.split(" ", 2);
+                String line = msg[0] + ": " + msg[1];
+                SwingUtilities.invokeLater(() -> {
+                    listModel.addElement(line);
+                    messageList.ensureIndexIsVisible(listModel.size() - 1);
+                });
+            }
+        }
+        else {
+            if (login.equalsIgnoreCase(fromLogin)) {
+                String line = fromLogin + ": " + msgBody;
+                SwingUtilities.invokeLater(() -> {
+                    listModel.addElement(line);
+                    messageList.ensureIndexIsVisible(listModel.size() - 1);
+                });
+            }
         }
     }
 }
