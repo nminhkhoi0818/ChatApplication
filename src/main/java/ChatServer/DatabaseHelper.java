@@ -11,6 +11,7 @@ public class DatabaseHelper {
         try {
             Class.forName("org.postgresql.Driver");
             connection = DriverManager.getConnection("jdbc:postgresql://dpg-clfb5hdadtrs73eajc20-a.oregon-postgres.render.com/week8db?user=nmkhoi&password=FZZq1J7lSVc8xatyiMJohFh4mOi6NeLV");
+            createUsersTable();
             createTable();
         } catch (Exception e) {
             e.printStackTrace();
@@ -28,6 +29,41 @@ public class DatabaseHelper {
                 ")";
         Statement stmt = connection.createStatement();
         stmt.execute(sql);
+    }
+
+    private void createUsersTable() throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS users (" +
+                "id SERIAL PRIMARY KEY," +
+                "username VARCHAR(255) UNIQUE NOT NULL," +
+                "password VARCHAR(255) NOT NULL" +
+                ")";
+        Statement stmt = connection.createStatement();
+        stmt.execute(sql);
+    }
+
+    public void registerUser(String username, String password) {
+        String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean authenticateUser(String username, String password) {
+        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            try (ResultSet resultSet = pstmt.executeQuery()) {
+                return resultSet.next(); // True if user is authenticated, false otherwise
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public void insertMessage(String sender, String receiver, String message) {
@@ -67,6 +103,23 @@ public class DatabaseHelper {
         }
         return messages;
     }
+
+    public List<String> getAllUsers() {
+        List<String> users = new ArrayList<>();
+        String sql = "SELECT username FROM users";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql);
+             ResultSet resultSet = pstmt.executeQuery()) {
+            while (resultSet.next()) {
+                String username = resultSet.getString("username");
+                users.add(username);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return users;
+    }
+
 
     public void close() {
         try {

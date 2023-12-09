@@ -3,6 +3,8 @@ package ChatClient;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class ChatClient {
     private final String serverName;
@@ -50,6 +52,33 @@ public class ChatClient {
         }
     }
 
+    public boolean register(String login, String password) throws IOException {
+        String cmd = "register " + login + " " + password + "\n";
+        serverOut.write(cmd.getBytes());;
+
+        String response = bufferedIn.readLine();
+        System.out.println("Response Line: " + response);
+
+        return "ok register".equalsIgnoreCase(response);
+    }
+
+    public List<String> getUsers(String login) throws IOException {
+        String cmd = "users " + login + "\n";
+        serverOut.write(cmd.getBytes());
+
+        String response = bufferedIn.readLine();
+        System.out.println(response);
+        String[] tokens = response.split(" ");
+        if (tokens.length > 1) {
+            List<String> users = new ArrayList<>();
+            for (int i = 3; i < tokens.length; i++) {
+                users.add(tokens[i]);
+            }
+            return users;
+        }
+        return Collections.emptyList();
+    }
+
     public void logoff() throws IOException {
         String cmd = "logoff\n";
         serverOut.write(cmd.getBytes());;
@@ -69,7 +98,6 @@ public class ChatClient {
         try {
             String line;
             while ((line = bufferedIn.readLine()) != null) {
-                System.out.println(line);
                 String[] tokens = line.split(" ");
                 if (tokens.length > 0) {
                     String cmd = tokens[0];
@@ -90,6 +118,7 @@ public class ChatClient {
             throw new RuntimeException(e);
         }
     }
+
 
     private void handleHistoryMessage(String[] tokensMsg) {
         String login = tokensMsg[1];

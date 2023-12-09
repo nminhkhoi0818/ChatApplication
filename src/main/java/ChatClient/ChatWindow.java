@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.List;
 
 public class ChatWindow extends JFrame {
     ChatClient client;
@@ -25,7 +26,7 @@ public class ChatWindow extends JFrame {
 
     ArrayList<MessagePane> messagePanes;
 
-    ChatWindow(String login, ChatClient client) {
+    ChatWindow(String login, ChatClient client) throws IOException {
         this.client = client;
         this.login = login;
         // Sidebar
@@ -71,17 +72,14 @@ public class ChatWindow extends JFrame {
         mainContent.add(cardPanel, BorderLayout.CENTER);
 
         try {
-            BufferedReader br = new BufferedReader(new FileReader(new File("assets/auth.txt")));
-            String line;
-            while((line = br.readLine()) != null) {
-                String[] data = line.split("`");
-                if (!Objects.equals(login, data[0])) {
-                    MessagePane messagePane = new MessagePane(client, data[0]);
+            List<String> users = client.getUsers(login);
+            for (String user : users) {
+                if (!Objects.equals(login, user)) {
+                    MessagePane messagePane = new MessagePane(client, user);
                     messagePanes.add(messagePane);
-                    cardPanel.add(messagePane, data[0]);
+                    cardPanel.add(messagePane, user);
                 }
             }
-            br.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

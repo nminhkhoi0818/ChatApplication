@@ -13,7 +13,6 @@ public class ServerWorker extends Thread {
     private final Server server;
     private String login = null;
     private OutputStream outputStream;
-
     private HashSet<String> topicSet = new HashSet<>();
     public ServerWorker(Server server, Socket clientSocket) {
         this.server = server;
@@ -46,7 +45,10 @@ public class ServerWorker extends Thread {
                     break;
                 } else if ("login".equalsIgnoreCase(cmd)) {
                     handleLogin(outputStream, tokens);
-                } else if ("msg".equalsIgnoreCase(cmd)) {
+                } else if ("register".equalsIgnoreCase(cmd)) {
+                    handleRegister(outputStream, tokens);
+                }
+                else if ("msg".equalsIgnoreCase(cmd)) {
                     String[] tokenMsg = line.split(" ", 3);
                     handleMessage(tokenMsg);
                 } else if ("join".equalsIgnoreCase(cmd)) {
@@ -55,6 +57,8 @@ public class ServerWorker extends Thread {
                     handleLeave(tokens);
                 } else if ("history".equalsIgnoreCase(cmd)) {
                     handleMessageHistory(tokens);
+                } else if ("users".equalsIgnoreCase(cmd)) {
+                    handleGetAllUsers(tokens);
                 }
                 else {
                     String msg = "unknown " + cmd + "\n";
@@ -144,7 +148,8 @@ public class ServerWorker extends Thread {
         if (tokens.length == 3) {
             String login = tokens[1];
             String password = tokens[2];
-            if (checkValidLogin(login, password)) {
+            DatabaseHelper databaseHelper = new DatabaseHelper();
+            if (databaseHelper.authenticateUser(login, password)) {
                 System.out.println("Hello");
                 String msg = "ok login\n";
                 outputStream.write(msg.getBytes());
@@ -175,27 +180,40 @@ public class ServerWorker extends Thread {
                 outputStream.write(msg.getBytes());
                 System.err.println("Login failed for " + login);
             }
+            databaseHelper.close();
         }
     }
 
-    private boolean checkValidLogin(String login, String password) {
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(new File("assets/auth.txt")));
-            String line;
-            while((line = br.readLine()) != null) {
-                String[] data = line.split("`");
-                if (data.length == 2) {
-                    if (login.equals(data[0]) && password.equals(data[1])) {
-                        br.close();
-                        return true;
-                    }
-                }
+    private void handleRegister(OutputStream outputStream, String[] tokens) throws IOException {
+        if (tokens.length == 3) {
+            String username = tokens[1];
+            String password = tokens[2];
+
+            DatabaseHelper databaseHelper = new DatabaseHelper();
+
+            // Check if the user already exists
+            if (databaseHelper.authenticateUser(username, password)) {
+                String msg = "error register\n";
+                outputStream.write(msg.getBytes());
+                System.err.println("Registration failed for " + username + ". User already exists.");
+            } else {
+                databaseHelper.registerUser(username, password);
+                String msg = "ok register\n";
+                outputStream.write(msg.getBytes());
+                System.out.println("User registered successfully: " + username);
             }
-            br.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            databaseHelper.close();
         }
-        return false;
+    }
+
+    private void handleGetAllUsers(String[] tokens) throws IOException {
+        DatabaseHelper databaseHelper = new DatabaseHelper();
+        List<String> allUsers = databaseHelper.getAllUsers();
+        if (allUsers != null) {
+            String userListMsg = "users " + tokens[1] + " " + String.join(" ", allUsers) + "\n";
+            outputStream.write(userListMsg.getBytes());
+        }
+        databaseHelper.close();
     }
 
     private void send(String msg) throws IOException {

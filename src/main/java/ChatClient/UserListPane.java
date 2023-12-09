@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.util.List;
 
 public class UserListPane extends JPanel implements UserStatusListener {
     private final ChatClient client;
@@ -12,7 +13,7 @@ public class UserListPane extends JPanel implements UserStatusListener {
 
     private ChatWindow chatWindow;
 
-    public UserListPane(ChatClient client, ChatWindow chatWindow) {
+    public UserListPane(ChatClient client, ChatWindow chatWindow) throws IOException {
         this.client = client;
         this.client.addUserStatusListener(this);
         this.chatWindow = chatWindow;
@@ -21,6 +22,8 @@ public class UserListPane extends JPanel implements UserStatusListener {
         userListUI = new JList<>(userListModel);
         setLayout(new BorderLayout());
         add(new JScrollPane(userListUI), BorderLayout.CENTER);
+
+        getAllUser();
 
         userListUI.addMouseListener(new MouseAdapter() {
             @Override
@@ -41,5 +44,12 @@ public class UserListPane extends JPanel implements UserStatusListener {
     @Override
     public void offline(String login) {
         userListModel.removeElement(login);
+    }
+
+    public void getAllUser() throws IOException {
+        List<String> users = client.getUsers(client.getLogin());
+        for (String user : users) {
+            userListModel.addElement(user);
+        }
     }
 }

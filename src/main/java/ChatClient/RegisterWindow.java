@@ -4,10 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Objects;
 
 public class RegisterWindow extends JFrame {
     JLabel userLabel = new JLabel("Username");
@@ -19,15 +16,15 @@ public class RegisterWindow extends JFrame {
     JButton registerButton = new JButton("Register");
     JButton loginButton = new JButton("Login");
     LoginWindow loginWindow;
-    public RegisterWindow() throws IOException {
+    public RegisterWindow(ChatClient client) throws IOException {
         registerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    if(handleRegister()) {
+                    if(client.register(loginField.getText(), passwordField.getText())) {
                         JOptionPane.showMessageDialog(RegisterWindow.this, "Create account successfully", "Notification", JOptionPane.INFORMATION_MESSAGE);
                     } else {
-                        JOptionPane.showMessageDialog(RegisterWindow.this, "Invalid username/password", "Notification", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(RegisterWindow.this, "Registration failed", "Notification", JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
@@ -57,20 +54,6 @@ public class RegisterWindow extends JFrame {
         setVisible(true);
     }
 
-    private boolean handleRegister() throws IOException {
-        String login = loginField.getText();
-        String password = passwordField.getText();
-        String confirmPassword = confirmPasswordField.getText();
-        if (!Objects.equals(login, "") && password.equals(confirmPassword)) {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("assets/auth.txt", true));
-            writer.write(login + "`" + password);
-            writer.newLine();
-            writer.close();
-            return true;
-        }
-        return false;
-    }
-
     private void showLoginWindow() {
         if (loginWindow == null) {
             try {
@@ -79,9 +62,5 @@ public class RegisterWindow extends JFrame {
                 e.printStackTrace();
             }
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        new RegisterWindow();
     }
 }

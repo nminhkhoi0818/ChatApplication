@@ -37,7 +37,7 @@ public class LoginWindow extends JFrame {
                 LoginWindow.this.setVisible(false);
                 if (registerWindow == null) {
                     try {
-                        registerWindow = new RegisterWindow();
+                        registerWindow = new RegisterWindow(client);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
