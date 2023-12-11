@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 public class UserListPane extends JPanel implements UserStatusListener {
@@ -24,6 +25,7 @@ public class UserListPane extends JPanel implements UserStatusListener {
         add(new JScrollPane(userListUI), BorderLayout.CENTER);
 
         getAllUser();
+        getAllGroups();
 
         userListUI.addMouseListener(new MouseAdapter() {
             @Override
@@ -53,5 +55,18 @@ public class UserListPane extends JPanel implements UserStatusListener {
                 userListModel.addElement(user);
             }
         }
+    }
+
+    public void getAllGroups() throws IOException {
+        List<String> groups = client.getGroups(client.getLogin());
+        for (int i = 0; i < groups.size(); i++) {
+            if (i != 0) {
+                userListModel.addElement(groups.get(i).split(" ")[1]);
+            }
+        }
+    }
+
+    public void addGroup(String groupName) {
+        userListModel.addElement(groupName);
     }
 }

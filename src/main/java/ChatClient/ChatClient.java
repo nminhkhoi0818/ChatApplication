@@ -3,6 +3,7 @@ package ChatClient;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -78,6 +79,21 @@ public class ChatClient {
         return Collections.emptyList();
     }
 
+    public List<String> getGroups(String login) throws IOException {
+        String cmd = "groups " + login + "\n";
+        serverOut.write(cmd.getBytes());
+
+        String response = bufferedIn.readLine();
+        if (response != null && !response.isEmpty()) {
+            String[] groupInfo = response.split(";");
+            System.out.println(groupInfo[0]);
+            System.out.println(groupInfo[1]);
+            System.out.println(groupInfo[2]);
+            return new ArrayList<>(Arrays.asList(groupInfo));
+        }
+        return Collections.emptyList();
+    }
+
     public void logoff() throws IOException {
         String cmd = "logoff\n";
         serverOut.write(cmd.getBytes());;
@@ -110,6 +126,8 @@ public class ChatClient {
                     } else if ("history".equalsIgnoreCase(cmd)) {
                         String[] tokensMsg = line.split(" ", 3);
                         handleHistoryMessage(tokensMsg);
+                    } else if ("file".equalsIgnoreCase(cmd)) {
+                        handleFileMessage(tokens);
                     }
                 }
             }
@@ -118,21 +136,28 @@ public class ChatClient {
         }
     }
 
-
-    private void handleHistoryMessage(String[] tokensMsg) {
-        String login = tokensMsg[1];
-        String msgBody = tokensMsg[2];
-        System.out.println(tokensMsg);
+    private void handleFileMessage(String[] tokens) throws IOException {
+        System.out.println(Arrays.toString(tokens));
+        String login = tokens[1];
+        String msgBody = tokens[2];
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody, true);
+            listener.onMessage(login, msgBody, false, true);
         }
     }
 
-    private void handleMessage(String[] tokensMsg) {
+    private void handleHistoryMessage(String[] tokensMsg) throws IOException {
         String login = tokensMsg[1];
         String msgBody = tokensMsg[2];
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody, false);
+            listener.onMessage(login, msgBody, true, false);
+        }
+    }
+
+    private void handleMessage(String[] tokensMsg) throws IOException {
+        String login = tokensMsg[1];
+        String msgBody = tokensMsg[2];
+        for (MessageListener listener : messageListeners) {
+            listener.onMessage(login, msgBody, false, false);
         }
     }
 
@@ -187,5 +212,42 @@ public class ChatClient {
     public void getMessageHistory(String sender, String receiver) throws IOException {
         String cmd = "history " + sender + " " + receiver + "\n";
         serverOut.write(cmd.getBytes());;
+    }
+
+    public void sendFile(String login, File file) throws IOException {
+        if (file != null) {
+            FileInputStream fis = new FileInputStream(file);
+            BufferedInputStream bis = new BufferedInputStream(fis);
+
+            long fileSize = file.length();
+
+            serverOut.write(("file " + login + " " + file.getName() + " " + fileSize + "\n").getBytes());
+            serverOut.flush();
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = bis.read(buffer)) != -1) {
+                serverOut.write(buffer, 0, bytesRead);
+                serverOut.flush();
+            }
+
+            bis.close();
+
+            serverOut.flush();
+        }
+    }
+
+    public boolean checkExistFile(String fileName) throws IOException {
+        serverOut.write(("check " + login + " " + fileName).getBytes());
+        String response = bufferedIn.readLine();
+        if (response.equalsIgnoreCase("ok exist")) {
+            return true;
+        }
+        return false;
+    }
+
+    public void createGroup(String groupName, List<String> users) throws IOException {
+        String listUser = String.join(" ", users);
+        serverOut.write(("create-group " + groupName + " " + listUser + "\n").getBytes());
     }
 }

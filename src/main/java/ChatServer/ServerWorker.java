@@ -1,12 +1,13 @@
 package ChatServer;
 
+import javax.swing.plaf.synth.SynthDesktopIconUI;
 import java.io.*;
 import java.net.Socket;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.SplittableRandom;
 
 public class ServerWorker extends Thread {
     private final Socket clientSocket;
@@ -14,6 +15,7 @@ public class ServerWorker extends Thread {
     private String login = null;
     private OutputStream outputStream;
     private HashSet<String> topicSet = new HashSet<>();
+    private List<String> fileNameList = new ArrayList<>();
     public ServerWorker(Server server, Socket clientSocket) {
         this.server = server;
         this.clientSocket = clientSocket;
@@ -59,6 +61,15 @@ public class ServerWorker extends Thread {
                     handleMessageHistory(tokens);
                 } else if ("users".equalsIgnoreCase(cmd)) {
                     handleGetAllUsers(tokens);
+                } else if ("file".equalsIgnoreCase(cmd)) {
+                    handleFileMessage(tokens);
+                } else if ("check".equalsIgnoreCase(cmd)) {
+                    checkExistFileName(tokens);
+                } else if ("create-group".equalsIgnoreCase(cmd)) {
+                    String[] tokenMsg = line.split(" ", 3);
+                    handleCreateGroup(tokenMsg);
+                } else if ("groups".equalsIgnoreCase(cmd)) {
+                    handleGetAllGroup(tokens);
                 }
                 else {
                     String msg = "unknown " + cmd + "\n";
@@ -67,6 +78,48 @@ public class ServerWorker extends Thread {
             }
         }
         clientSocket.close();
+    }
+
+    private void handleGetAllGroup(String[] tokens) throws IOException {
+        String allGroups = String.valueOf(server.getDatabaseHelper().getAllGroupsInfo());
+        if (allGroups != null) {
+            String groupListMsg = "groups " + tokens[1] + ";" + allGroups + "\n";
+            outputStream.write(groupListMsg.getBytes());
+        }
+    }
+
+    private void handleCreateGroup(String[] tokens) {
+        String groupName = tokens[1];
+        List<String> groupUsers = Arrays.asList(tokens[2].split(" "));
+        server.getDatabaseHelper().createGroup(groupName, groupUsers);
+    }
+
+    public void handleFileMessage(String[] tokens) throws IOException {
+        InputStream inputStream = clientSocket.getInputStream();
+
+        String sendTo = tokens[1];
+        String fileName = tokens[2];
+        long fileSize = Long.parseLong(tokens[3]);
+
+        FileOutputStream fos = new FileOutputStream("files/" + fileName);
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        long totalBytesRead = 0;
+
+        try {
+            while ((totalBytesRead < fileSize) && (bytesRead = inputStream.read(buffer)) != -1) {
+                bos.write(buffer, 0, bytesRead);
+                totalBytesRead += bytesRead;
+                bos.flush();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        bos.close();
+        fos.close();
     }
 
     private void handleLeave(String[] tokens) {
@@ -124,6 +177,22 @@ public class ServerWorker extends Thread {
         clientSocket.close();
     }
 
+    public void checkExistFileName(String[] tokens) throws IOException {
+        String fileName = tokens[2];
+        String login = tokens[1];
+        List<ServerWorker> workerList = server.getWorkerList();
+        for (String fName : fileNameList) {
+            if (fileName.equalsIgnoreCase(fName)) {
+                for (ServerWorker worker : workerList) {
+                    if (login.equalsIgnoreCase(worker.getLogin())) {
+                       worker.send("ok exist");
+                    }
+                }
+                return;
+            }
+        }
+    }
+
     public String getLogin() {
         return login;
     }
@@ -132,8 +201,7 @@ public class ServerWorker extends Thread {
         if (tokens.length == 3) {
             String login = tokens[1];
             String password = tokens[2];
-            DatabaseHelper databaseHelper = new DatabaseHelper();
-            if (databaseHelper.authenticateUser(login, password)) {
+            if (server.getDatabaseHelper().authenticateUser(login, password)) {
                 System.out.println("Hello");
                 String msg = "ok login\n";
                 outputStream.write(msg.getBytes());
@@ -164,7 +232,6 @@ public class ServerWorker extends Thread {
                 outputStream.write(msg.getBytes());
                 System.err.println("Login failed for " + login);
             }
-            databaseHelper.close();
         }
     }
 
@@ -191,20 +258,18 @@ public class ServerWorker extends Thread {
     }
 
     private void handleGetAllUsers(String[] tokens) throws IOException {
-        DatabaseHelper databaseHelper = new DatabaseHelper();
-        List<String> allUsers = databaseHelper.getAllUsers();
+        List<String> allUsers = server.getDatabaseHelper().getAllUsers();
         if (allUsers != null) {
             String userListMsg = "users " + tokens[1] + " " + String.join(" ", allUsers) + "\n";
             outputStream.write(userListMsg.getBytes());
         }
-        databaseHelper.close();
     }
 
     private void handleMessageHistory(String[] tokens) throws SQLException, IOException {
         String sender = tokens[1];
         String receiver = tokens[2];
-        DatabaseHelper databaseHelper = new DatabaseHelper();
-        List<String> chatHistory = databaseHelper.getChatHistory(sender, receiver);
+
+        List<String> chatHistory = server.getDatabaseHelper().getChatHistory(sender, receiver);
 
         List<ServerWorker> workerList = server.getWorkerList();
         for (ServerWorker worker : workerList) {
@@ -215,7 +280,6 @@ public class ServerWorker extends Thread {
                 }
             }
         }
-        databaseHelper.close();
     }
 
     private void send(String msg) throws IOException {

@@ -120,6 +120,140 @@ public class DatabaseHelper {
         return users;
     }
 
+    public int getUserIdByUsername(String username) {
+        String sql = "SELECT id FROM users WHERE username = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            } else {
+                return -1;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public void createGroup(String groupName, List<String> members) {
+        String insertGroup = "INSERT INTO groups (group_name) VALUES (?) RETURNING id";
+        String insertMembers = "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)";
+
+        try (PreparedStatement pstmtGroup = connection.prepareStatement(insertGroup, Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement pstmtMember = connection.prepareStatement(insertMembers)) {
+
+            pstmtGroup.setString(1, groupName);
+            pstmtGroup.executeUpdate();
+            ResultSet rsGroup = pstmtGroup.getGeneratedKeys();
+            if (rsGroup.next()) {
+                int groupId = rsGroup.getInt(1);
+
+                for (String member : members) {
+                    int userId = getUserIdByUsername(member);
+                    pstmtMember.setInt(1, groupId);
+                    pstmtMember.setInt(2, userId);
+                    pstmtMember.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public StringBuilder getAllGroupsInfo() {
+        StringBuilder allGroupsInfo = new StringBuilder();
+
+        String getAllGroupsQuery = "SELECT * FROM groups";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rsGroups = stmt.executeQuery(getAllGroupsQuery)) {
+            while (rsGroups.next()) {
+                int groupId = rsGroups.getInt("id");
+                String groupName = rsGroups.getString("group_name");
+
+                allGroupsInfo.append(groupId).append(" ").append(groupName).append(" ");
+
+                String getMembers = "SELECT username FROM users INNER JOIN group_members ON users.id = group_members.user_id WHERE group_members.group_id = ?";
+                try (PreparedStatement pstmtMembers = connection.prepareStatement(getMembers)) {
+                    pstmtMembers.setInt(1, groupId);
+                    ResultSet rsMembers = pstmtMembers.executeQuery();
+                    boolean isFirst = true;
+                    while (rsMembers.next()) {
+                        if (isFirst) {
+                            allGroupsInfo.append(rsMembers.getString("username"));
+                            isFirst = false;
+                        } else {
+                            allGroupsInfo.append(" ").append(rsMembers.getString("username"));
+                        }
+                    }
+                }
+                allGroupsInfo.append(";");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return allGroupsInfo;
+    }
+
+    public void sendGroupMessage(int senderId, int groupId, String message) {
+        String sql = "INSERT INTO group_messages (group_id, sender_id, message) VALUES (?, ?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, groupId);
+            pstmt.setInt(2, senderId);
+            pstmt.setString(3, message);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<String> getGroupMessages(int groupId) {
+        List<String> messages = new ArrayList<>();
+        String sql = "SELECT message, timestamp FROM group_messages WHERE group_id = ? ORDER BY timestamp ASC";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, groupId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String message = rs.getString("message");
+                Timestamp timestamp = rs.getTimestamp("timestamp");
+                messages.add(timestamp + ": " + message);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return messages;
+    }
+
+    public void createGroupChatTables() {
+        String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
+                "id SERIAL PRIMARY KEY," +
+                "group_name VARCHAR(255) UNIQUE NOT NULL" +
+                ")";
+
+        String createGroupMembersTable = "CREATE TABLE IF NOT EXISTS group_members (" +
+                "id SERIAL PRIMARY KEY," +
+                "group_id INT NOT NULL REFERENCES groups(id)," +
+                "user_id INT NOT NULL REFERENCES users(id)," +
+                "UNIQUE(group_id, user_id)" +
+                ")";
+
+        String createGroupMessagesTable = "CREATE TABLE IF NOT EXISTS group_messages (" +
+                "id SERIAL PRIMARY KEY," +
+                "group_id INT NOT NULL REFERENCES groups(id)," +
+                "sender_id INT NOT NULL REFERENCES users(id)," +
+                "message TEXT NOT NULL," +
+                "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                ")";
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createGroupsTable);
+            stmt.execute(createGroupMembersTable);
+            stmt.execute(createGroupMessagesTable);
+            System.out.println("Group chat tables created successfully");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void close() {
         try {
@@ -145,5 +279,7 @@ public class DatabaseHelper {
 
         DatabaseHelper databaseHelper = new DatabaseHelper();
         databaseHelper.clearTableData("messages");
+        databaseHelper.clearTableData("groups");
+        databaseHelper.createGroupChatTables();
     }
 }

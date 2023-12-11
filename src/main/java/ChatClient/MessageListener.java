@@ -1,5 +1,7 @@
 package ChatClient;
 
+import java.io.IOException;
+
 public interface MessageListener {
-    public void onMessage(String fromLogin, String msgBody, boolean history);
+    public void onMessage(String fromLogin, String msgBody, boolean history, boolean file) throws IOException;
 }
