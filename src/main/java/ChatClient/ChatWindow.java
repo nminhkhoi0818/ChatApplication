@@ -4,16 +4,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.List;
 
-public class ChatWindow extends JFrame {
+public class ChatWindow extends JFrame implements ChatWindowListener {
     ChatClient client;
     String login;
     JPanel sideBar;
@@ -28,10 +24,12 @@ public class ChatWindow extends JFrame {
     JPanel cardPanel;
 
     ArrayList<MessagePane> messagePanes;
+    ArrayList<String> messagePanesList = new ArrayList<>();
 
     ChatWindow(String login, ChatClient client) throws IOException {
         this.client = client;
         this.login = login;
+        this.client.addChatWindowListener(this);
         // Sidebar
         sideBar = new JPanel(new BorderLayout());
         userInfo = new JLabel("<html>Username: " + login + "<br>Port: " + client.getServerPort()+ "</html>");
@@ -42,7 +40,7 @@ public class ChatWindow extends JFrame {
         JPanel buttonSideBarPanel = new JPanel(new GridLayout(2, 1, 0, 5));
         buttonSideBarPanel.add(createGroupButton);
         buttonSideBarPanel.add(logoffButton);
-        List<String> users = client.getUsers(login);
+        client.getUsers(login);
         createGroupButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -53,9 +51,9 @@ public class ChatWindow extends JFrame {
                 JPanel userListPanel = new JPanel();
                 userListPanel.setLayout(new BorderLayout());
                 DefaultListModel<String> listModel = new DefaultListModel<>();
-                for (String user : users) {
-                    listModel.addElement(user);
-                }
+//                for (String user : users) {
+//                    listModel.addElement(user);
+//                }
                 JList<String> userJList = new JList<>(listModel);
                 JScrollPane userScrollPanel = new JScrollPane(userJList);
                 userListPanel.add(userScrollPanel, BorderLayout.CENTER);
@@ -116,9 +114,13 @@ public class ChatWindow extends JFrame {
         mainContent = new JPanel(new BorderLayout());
         chattingWith = new JLabel("");
 
+        messagePanes = new ArrayList<MessagePane>();
+        cardLayout = new CardLayout();
+        cardPanel = new JPanel(cardLayout);
+        mainContent.add(cardPanel, BorderLayout.CENTER);
+
         mainContent.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
         mainContent.add(chattingWith, BorderLayout.NORTH);
-        addAllMessagePanes();
 
         setLayout(new BorderLayout());
         add(sideBar, BorderLayout.WEST);
@@ -132,35 +134,38 @@ public class ChatWindow extends JFrame {
         this.setVisible(true);
     }
 
-    public void addAllMessagePanes() {
-        messagePanes = new ArrayList<MessagePane>();
-        cardLayout = new CardLayout();
-        cardPanel = new JPanel(cardLayout);
-        mainContent.add(cardPanel, BorderLayout.CENTER);
-        boolean firstUser = false;
-        try {
-            List<String> users = client.getUsers(login);
-            for (String user : users) {
-                if (!Objects.equals(login, user)) {
-                    MessagePane messagePane = new MessagePane(client, user);
-                    if (!firstUser) {
-                        chattingWith.setText(user);
-                        firstUser = true;
-                    }
-                    messagePanes.add(messagePane);
-                    cardPanel.add(messagePane, user);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void showMessagePane(String login) {
         for (MessagePane messagePane : messagePanes) {
             if (login.equals(messagePane.getLogin())) {
-                chattingWith.setText(login);
+                String[] members = messagePane.getMembers();
+                if (members != null && members.length > 0) {
+                    StringBuilder line = new StringBuilder("Members:");
+                    for (String member : members) {
+                        line.append(" ").append(member);
+                    }
+                    System.out.println(line);
+                    chattingWith.setText(String.valueOf(line));
+                } else {
+                    chattingWith.setText(login);
+                }
                 cardLayout.show(cardPanel, login);
+            }
+        }
+    }
+
+    @Override
+    public void addUser(String user, String[] members) {
+        if (!user.equalsIgnoreCase(login) && !messagePanesList.contains(user)) {
+            messagePanesList.add(user);
+            try {
+                MessagePane messagePane = new MessagePane(client, user, members);
+                if (messagePanesList.size() == 1) {
+                    chattingWith.setText(user);
+                }
+                messagePanes.add(messagePane);
+                cardPanel.add(messagePane, user);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }

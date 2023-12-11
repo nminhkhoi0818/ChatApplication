@@ -30,10 +30,10 @@ public class UserListPane extends JPanel implements UserStatusListener {
         userListUI.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() > 1) {
-                    String login = userListUI.getSelectedValue();
-                    chatWindow.showMessagePane(login);
-                }
+            if (e.getClickCount() > 1) {
+                String login = userListUI.getSelectedValue();
+                chatWindow.showMessagePane(login);
+            }
             }
         });
     }
@@ -48,22 +48,19 @@ public class UserListPane extends JPanel implements UserStatusListener {
         userListModel.removeElement(login);
     }
 
-    public void getAllUser() throws IOException {
-        List<String> users = client.getUsers(client.getLogin());
-        for (String user : users) {
-            if (!user.equalsIgnoreCase(client.getLogin())) {
-                userListModel.addElement(user);
-            }
+    @Override
+    public void addUser(String login) {
+        if (!login.equalsIgnoreCase(client.getLogin()) && !userListModel.contains(login)) {
+            userListModel.addElement(login);
         }
     }
 
+    public void getAllUser() throws IOException {
+        client.getUsers(client.getLogin());
+    }
+
     public void getAllGroups() throws IOException {
-        List<String> groups = client.getGroups(client.getLogin());
-        for (int i = 0; i < groups.size(); i++) {
-            if (i != 0) {
-                userListModel.addElement(groups.get(i).split(" ")[1]);
-            }
-        }
+        client.getGroups(client.getLogin());
     }
 
     public void addGroup(String groupName) {

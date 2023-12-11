@@ -144,21 +144,12 @@ public class ServerWorker extends Thread {
         String sendTo = tokens[1];
         String body = tokens[2];
 
-        boolean isTopic = sendTo.charAt(0) == '#';
-
         List<ServerWorker> workerList = server.getWorkerList();
+        server.getDatabaseHelper().insertMessage(login, sendTo, body);
         for (ServerWorker worker : workerList) {
-            if (isTopic) {
-                if (worker.isMemberOfTopic(sendTo)) {
-                    String outMsg = "msg " + sendTo + ":" + login + " " + body + "\n";
-                    worker.send(outMsg);
-                }
-            } else {
-                if (sendTo.equalsIgnoreCase(worker.getLogin())) {
-                    String outMsg = "msg " + login + " " + body + "\n";
-                    worker.send(outMsg);
-                    server.getDatabaseHelper().insertMessage(login, sendTo, body);
-                }
+            if (sendTo.equalsIgnoreCase(worker.getLogin())) {
+                String outMsg = "msg " + login + " " + body + "\n";
+                worker.send(outMsg);
             }
         }
     }
@@ -202,7 +193,6 @@ public class ServerWorker extends Thread {
             String login = tokens[1];
             String password = tokens[2];
             if (server.getDatabaseHelper().authenticateUser(login, password)) {
-                System.out.println("Hello");
                 String msg = "ok login\n";
                 outputStream.write(msg.getBytes());
                 this.login = login;
@@ -270,12 +260,12 @@ public class ServerWorker extends Thread {
         String receiver = tokens[2];
 
         List<String> chatHistory = server.getDatabaseHelper().getChatHistory(sender, receiver);
-
         List<ServerWorker> workerList = server.getWorkerList();
         for (ServerWorker worker : workerList) {
             if (sender.equalsIgnoreCase(worker.getLogin())) {
                 for (String msg : chatHistory) {
                     String outMsg = "history " + receiver + " " + msg + "\n";
+                    System.out.println(outMsg);
                     worker.send(outMsg);
                 }
             }

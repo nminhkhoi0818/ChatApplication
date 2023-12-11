@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class ChatClient {
@@ -27,6 +26,8 @@ public class ChatClient {
 
     private ArrayList<UserStatusListener> userStatusListeners = new ArrayList<>();
     private ArrayList<MessageListener> messageListeners = new ArrayList<>();
+
+    private  ArrayList<ChatWindowListener> chatWindowListeners = new ArrayList<>();
 
     public ChatClient(String serverName, int serverPort) {
         this.serverName = serverName;
@@ -58,40 +59,18 @@ public class ChatClient {
         serverOut.write(cmd.getBytes());;
 
         String response = bufferedIn.readLine();
-        System.out.println("Response Line: " + response);
 
         return "ok register".equalsIgnoreCase(response);
     }
 
-    public List<String> getUsers(String login) throws IOException {
+    public void getUsers(String login) throws IOException {
         String cmd = "users " + login + "\n";
         serverOut.write(cmd.getBytes());
-
-        String response = bufferedIn.readLine();
-        String[] tokens = response.split(" ");
-        if (tokens.length > 1) {
-            List<String> users = new ArrayList<>();
-            for (int i = 2; i < tokens.length; i++) {
-                users.add(tokens[i]);
-            }
-            return users;
-        }
-        return Collections.emptyList();
     }
 
-    public List<String> getGroups(String login) throws IOException {
+    public void getGroups(String login) throws IOException {
         String cmd = "groups " + login + "\n";
         serverOut.write(cmd.getBytes());
-
-        String response = bufferedIn.readLine();
-        if (response != null && !response.isEmpty()) {
-            String[] groupInfo = response.split(";");
-            System.out.println(groupInfo[0]);
-            System.out.println(groupInfo[1]);
-            System.out.println(groupInfo[2]);
-            return new ArrayList<>(Arrays.asList(groupInfo));
-        }
-        return Collections.emptyList();
     }
 
     public void logoff() throws IOException {
@@ -128,6 +107,11 @@ public class ChatClient {
                         handleHistoryMessage(tokensMsg);
                     } else if ("file".equalsIgnoreCase(cmd)) {
                         handleFileMessage(tokens);
+                    } else if ("users".equalsIgnoreCase(cmd)) {
+                        handleUserList(tokens);
+                    }
+                    else if ("groups".equalsIgnoreCase(cmd)) {
+                        handleGroupList(line);
                     }
                 }
             }
@@ -136,8 +120,36 @@ public class ChatClient {
         }
     }
 
+    private void handleGroupList(String line) {
+        if (line != null) {
+            String[] groupInfo = line.split(";");
+            for (int i = 0; i < groupInfo.length; i++) {
+                if (i != 0) {
+                    for (UserStatusListener listener : userStatusListeners) {
+                        listener.addUser(groupInfo[i].split(" ")[1]);
+                    }
+                    for (ChatWindowListener listener : chatWindowListeners) {
+                        listener.addUser(groupInfo[i].split(" ")[1], Arrays.copyOfRange(groupInfo[i].split(" "), 2, groupInfo[i].split(" ").length));
+                    }
+                }
+            }
+        }
+    }
+
+    private void handleUserList(String[] tokens) {
+        if (tokens.length > 1) {
+            for (int i = 2; i < tokens.length; i++) {
+                for (UserStatusListener listener : userStatusListeners) {
+                    listener.addUser(tokens[i]);
+                }
+                for (ChatWindowListener listener : chatWindowListeners) {
+                    listener.addUser(tokens[i], null);
+                }
+            }
+        }
+    }
+
     private void handleFileMessage(String[] tokens) throws IOException {
-        System.out.println(Arrays.toString(tokens));
         String login = tokens[1];
         String msgBody = tokens[2];
         for (MessageListener listener : messageListeners) {
@@ -208,6 +220,8 @@ public class ChatClient {
     public void removeMessageListener(MessageListener listener) {
         messageListeners.remove(listener);
     }
+
+    public void addChatWindowListener(ChatWindowListener listener) { chatWindowListeners.add(listener); }
 
     public void getMessageHistory(String sender, String receiver) throws IOException {
         String cmd = "history " + sender + " " + receiver + "\n";

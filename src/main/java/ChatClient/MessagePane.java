@@ -13,6 +13,13 @@ import java.util.Objects;
 public class MessagePane extends JPanel implements MessageListener {
     private final ChatClient client;
     private final String login;
+
+    private String[] members;
+
+    public String[] getMembers() {
+        return members;
+    }
+
     private DefaultListModel<String> listModel = new DefaultListModel<>();
     private JList<String> messageList = new JList<>(listModel);
     private JTextField inputField = new JTextField();
@@ -23,9 +30,12 @@ public class MessagePane extends JPanel implements MessageListener {
         return login;
     }
 
-    public MessagePane(ChatClient client, String login) throws IOException {
+    public MessagePane(ChatClient client, String login, String[] members) throws IOException {
         this.login = login;
         this.client = client;
+        if (members != null && members.length > 0) {
+            this.members = members;
+        }
         client.addMessageListener(this);
         setLayout(new BorderLayout());
         add(new JScrollPane(messageList), BorderLayout.CENTER);
@@ -73,6 +83,7 @@ public class MessagePane extends JPanel implements MessageListener {
             }
         });
 
+        // Handle file
         messageList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {

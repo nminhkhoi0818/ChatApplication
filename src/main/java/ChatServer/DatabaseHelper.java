@@ -276,7 +276,6 @@ public class DatabaseHelper {
     }
 
     public static void main(String args[]) {
-
         DatabaseHelper databaseHelper = new DatabaseHelper();
         databaseHelper.clearTableData("messages");
         databaseHelper.clearTableData("groups");
