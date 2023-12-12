@@ -49,7 +49,7 @@ public class MessagePane extends JPanel implements MessageListener {
         inputPanel.add(inputField, BorderLayout.CENTER);
         inputPanel.add(buttonPanel, BorderLayout.EAST);
         add(inputPanel, BorderLayout.SOUTH);
-        client.getMessageHistory(client.getLogin(), login);
+        client.getMessageHistory(client.getLogin(), login, (members != null));
         fileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -73,7 +73,11 @@ public class MessagePane extends JPanel implements MessageListener {
                 try {
                     String text = inputField.getText();
                     if (!text.isEmpty()) {
-                        client.msg(login, text);
+                        if (members != null) {
+                            client.msgGroup(login, text);
+                        } else {
+                            client.msg(login, text);
+                        }
                         listModel.addElement(client.getLogin() + ": " + text);
                         inputField.setText("");
                     }
@@ -94,7 +98,7 @@ public class MessagePane extends JPanel implements MessageListener {
     }
 
     @Override
-    public void onMessage(String fromLogin, String msgBody, boolean history, boolean file) throws IOException {
+    public void onMessage(String fromLogin, String msgBody, boolean history, boolean file, String sender) throws IOException {
         // Check if send to the current user
         if (history) {
             if (login.equalsIgnoreCase(fromLogin)) {
@@ -109,7 +113,12 @@ public class MessagePane extends JPanel implements MessageListener {
         }
         else {
             if (login.equalsIgnoreCase(fromLogin)) {
-                String line = fromLogin + ": " + msgBody;
+                if (sender != null && sender.equalsIgnoreCase(client.getLogin())) {
+                    return;
+                }
+                String line;
+                line = Objects.requireNonNullElse(sender, fromLogin) + ": " + msgBody;
+
                 if (file) {
                     if (client.checkExistFile(msgBody)) {
                         String clickableText = "<html>" + fromLogin + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + msgBody + "</span></html>";

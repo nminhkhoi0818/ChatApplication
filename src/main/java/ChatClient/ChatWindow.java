@@ -51,9 +51,7 @@ public class ChatWindow extends JFrame implements ChatWindowListener {
                 JPanel userListPanel = new JPanel();
                 userListPanel.setLayout(new BorderLayout());
                 DefaultListModel<String> listModel = new DefaultListModel<>();
-//                for (String user : users) {
-//                    listModel.addElement(user);
-//                }
+
                 JList<String> userJList = new JList<>(listModel);
                 JScrollPane userScrollPanel = new JScrollPane(userJList);
                 userListPanel.add(userScrollPanel, BorderLayout.CENTER);

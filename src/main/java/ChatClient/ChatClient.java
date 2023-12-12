@@ -39,6 +39,11 @@ public class ChatClient {
         serverOut.write(cmd.getBytes());
     }
 
+    public void msgGroup(String sendTo, String msgBody) throws IOException {
+        String cmd = "msg-group " + sendTo + " " + msgBody + "\n";
+        serverOut.write(cmd.getBytes());
+    }
+
     public boolean login(String login, String password) throws IOException {
         String cmd = "login " + login + " " + password + "\n";
         serverOut.write(cmd.getBytes());;
@@ -102,6 +107,9 @@ public class ChatClient {
                     } else if ("msg".equalsIgnoreCase(cmd)) {
                         String[] tokensMsg = line.split(" ", 3);
                         handleMessage(tokensMsg);
+                    } else if("msg-group".equalsIgnoreCase(cmd)) {
+                        String[] tokensMsg = line.split(" ", 4);
+                        handleGroupMessage(tokensMsg);
                     } else if ("history".equalsIgnoreCase(cmd)) {
                         String[] tokensMsg = line.split(" ", 3);
                         handleHistoryMessage(tokensMsg);
@@ -109,8 +117,7 @@ public class ChatClient {
                         handleFileMessage(tokens);
                     } else if ("users".equalsIgnoreCase(cmd)) {
                         handleUserList(tokens);
-                    }
-                    else if ("groups".equalsIgnoreCase(cmd)) {
+                    } else if ("groups".equalsIgnoreCase(cmd)) {
                         handleGroupList(line);
                     }
                 }
@@ -125,11 +132,14 @@ public class ChatClient {
             String[] groupInfo = line.split(";");
             for (int i = 0; i < groupInfo.length; i++) {
                 if (i != 0) {
-                    for (UserStatusListener listener : userStatusListeners) {
-                        listener.addUser(groupInfo[i].split(" ")[1]);
-                    }
-                    for (ChatWindowListener listener : chatWindowListeners) {
-                        listener.addUser(groupInfo[i].split(" ")[1], Arrays.copyOfRange(groupInfo[i].split(" "), 2, groupInfo[i].split(" ").length));
+                    String[] members = Arrays.copyOfRange(groupInfo[i].split(" "), 2, groupInfo[i].split(" ").length);
+                    if (Arrays.asList(members).contains(login)) {
+                        for (UserStatusListener listener : userStatusListeners) {
+                            listener.addUser(groupInfo[i].split(" ")[1]);
+                        }
+                        for (ChatWindowListener listener : chatWindowListeners) {
+                            listener.addUser(groupInfo[i].split(" ")[1], members);
+                        }
                     }
                 }
             }
@@ -153,7 +163,7 @@ public class ChatClient {
         String login = tokens[1];
         String msgBody = tokens[2];
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody, false, true);
+            listener.onMessage(login, msgBody, false, true, null);
         }
     }
 
@@ -161,7 +171,7 @@ public class ChatClient {
         String login = tokensMsg[1];
         String msgBody = tokensMsg[2];
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody, true, false);
+            listener.onMessage(login, msgBody, true, false, null);
         }
     }
 
@@ -169,7 +179,15 @@ public class ChatClient {
         String login = tokensMsg[1];
         String msgBody = tokensMsg[2];
         for (MessageListener listener : messageListeners) {
-            listener.onMessage(login, msgBody, false, false);
+            listener.onMessage(login, msgBody, false, false, null);
+        }
+    }
+    private void handleGroupMessage(String[] tokensMsg) throws IOException {
+        String login = tokensMsg[1];
+        String sender = tokensMsg[2];
+        String msgBody = tokensMsg[3];
+        for (MessageListener listener : messageListeners) {
+            listener.onMessage(login, msgBody, false, false, sender);
         }
     }
 
@@ -223,8 +241,13 @@ public class ChatClient {
 
     public void addChatWindowListener(ChatWindowListener listener) { chatWindowListeners.add(listener); }
 
-    public void getMessageHistory(String sender, String receiver) throws IOException {
-        String cmd = "history " + sender + " " + receiver + "\n";
+    public void getMessageHistory(String sender, String receiver, boolean group) throws IOException {
+        String cmd;
+        if (group) {
+            cmd = "history-group " + sender + " " +receiver + "\n";
+        } else {
+            cmd = "history " + sender + " " + receiver + "\n";
+        }
         serverOut.write(cmd.getBytes());;
     }
 

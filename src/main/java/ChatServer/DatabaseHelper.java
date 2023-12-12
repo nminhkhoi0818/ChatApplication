@@ -136,6 +136,22 @@ public class DatabaseHelper {
         }
     }
 
+    private int getGroupIdByName(String groupName) {
+        String sql = "SELECT id FROM groups WHERE group_name = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, groupName);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            } else {
+                return -1;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
     public void createGroup(String groupName, List<String> members) {
         String insertGroup = "INSERT INTO groups (group_name) VALUES (?) RETURNING id";
         String insertMembers = "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)";
@@ -195,7 +211,45 @@ public class DatabaseHelper {
         return allGroupsInfo;
     }
 
-    public void sendGroupMessage(int senderId, int groupId, String message) {
+    public List<String> getMembersByGroupName(String groupName) {
+        List<String> members = new ArrayList<>();
+        String getGroupId = "SELECT id FROM groups WHERE group_name = ?";
+        String getMembers = "SELECT username FROM users INNER JOIN group_members ON users.id = group_members.user_id WHERE group_members.group_id = ?";
+
+        try (PreparedStatement pstmtGroup = connection.prepareStatement(getGroupId)) {
+            pstmtGroup.setString(1, groupName);
+            ResultSet rsGroup = pstmtGroup.executeQuery();
+            if (rsGroup.next()) {
+                int groupId = rsGroup.getInt("id");
+
+                try (PreparedStatement pstmtMembers = connection.prepareStatement(getMembers)) {
+                    pstmtMembers.setInt(1, groupId);
+                    ResultSet rsMembers = pstmtMembers.executeQuery();
+                    while (rsMembers.next()) {
+                        members.add(rsMembers.getString("username"));
+                    }
+                }
+            } else {
+                System.out.println("Group not found.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return members;
+    }
+
+    public void sendGroupMessage(String senderName, String groupName, String message) {
+        int groupId = getGroupIdByName(groupName);
+        if (groupId == -1) {
+            System.out.println("Group not found.");
+            return;
+        }
+
+        int senderId = getUserIdByUsername(senderName);
+        if (senderId == -1) {
+            System.out.println("User not found.");
+            return;
+        }
         String sql = "INSERT INTO group_messages (group_id, sender_id, message) VALUES (?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setInt(1, groupId);
@@ -207,23 +261,30 @@ public class DatabaseHelper {
         }
     }
 
-    public List<String> getGroupMessages(int groupId) {
+    public List<String> getGroupMessages(String groupName) {
         List<String> messages = new ArrayList<>();
-        String sql = "SELECT message, timestamp FROM group_messages WHERE group_id = ? ORDER BY timestamp ASC";
+        int groupId = getGroupIdByName(groupName);
+        if (groupId == -1) {
+            System.out.println("Group not found.");
+            return messages;
+        }
+        // Updated SQL query to join with the users table and get the username
+        String sql = "SELECT users.username, group_messages.message FROM group_messages " +
+                "INNER JOIN users ON group_messages.sender_id = users.id " +
+                "WHERE group_messages.group_id = ? ORDER BY group_messages.timestamp ASC";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setInt(1, groupId);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
+                String username = rs.getString("username");
                 String message = rs.getString("message");
-                Timestamp timestamp = rs.getTimestamp("timestamp");
-                messages.add(timestamp + ": " + message);
+                messages.add(username + " " + message);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return messages;
     }
-
     public void createGroupChatTables() {
         String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
                 "id SERIAL PRIMARY KEY," +

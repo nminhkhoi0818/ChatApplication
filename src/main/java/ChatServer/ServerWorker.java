@@ -53,12 +53,17 @@ public class ServerWorker extends Thread {
                 else if ("msg".equalsIgnoreCase(cmd)) {
                     String[] tokenMsg = line.split(" ", 3);
                     handleMessage(tokenMsg);
+                } else if ("msg-group".equalsIgnoreCase(cmd)) {
+                    String[] tokenMsg = line.split(" ", 3);
+                    handleGroupMessage(tokenMsg);
                 } else if ("join".equalsIgnoreCase(cmd)) {
                     handleJoin(tokens);
                 } else if ("leave".equalsIgnoreCase(cmd)) {
                     handleLeave(tokens);
                 } else if ("history".equalsIgnoreCase(cmd)) {
                     handleMessageHistory(tokens);
+                } else if ("history-group".equalsIgnoreCase(cmd)) {
+                    handleGroupMessageHistory(tokens);
                 } else if ("users".equalsIgnoreCase(cmd)) {
                     handleGetAllUsers(tokens);
                 } else if ("file".equalsIgnoreCase(cmd)) {
@@ -78,6 +83,18 @@ public class ServerWorker extends Thread {
             }
         }
         clientSocket.close();
+    }
+
+    private void handleGroupMessage(String[] tokenMsg) throws IOException {
+        server.getDatabaseHelper().sendGroupMessage(login, tokenMsg[1], tokenMsg[2]);
+        List<String> members = server.getDatabaseHelper().getMembersByGroupName(tokenMsg[1]);
+        List<ServerWorker> workerList = server.getWorkerList();
+        for (ServerWorker worker : workerList) {
+            if (members.contains(worker.getLogin())) {
+                String outMsg = "msg-group " + tokenMsg[1] + " " + login + " " + tokenMsg[2] + "\n";
+                worker.send(outMsg);
+            }
+        }
     }
 
     private void handleGetAllGroup(String[] tokens) throws IOException {
@@ -265,7 +282,21 @@ public class ServerWorker extends Thread {
             if (sender.equalsIgnoreCase(worker.getLogin())) {
                 for (String msg : chatHistory) {
                     String outMsg = "history " + receiver + " " + msg + "\n";
-                    System.out.println(outMsg);
+                    worker.send(outMsg);
+                }
+            }
+        }
+    }
+
+    private void handleGroupMessageHistory(String[] tokens) throws IOException {
+        String sender = tokens[1];
+        String groupName = tokens[2];
+        List<String> chatHistory = server.getDatabaseHelper().getGroupMessages(groupName);
+        List<ServerWorker> workerList = server.getWorkerList();
+        for (ServerWorker worker : workerList) {
+            if (sender.equalsIgnoreCase(worker.getLogin())) {
+                for (String msg : chatHistory) {
+                    String outMsg = "history " + groupName + " " + msg + "\n";
                     worker.send(outMsg);
                 }
             }
