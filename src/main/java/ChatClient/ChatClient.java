@@ -114,17 +114,45 @@ public class ChatClient {
                         String[] tokensMsg = line.split(" ", 3);
                         handleHistoryMessage(tokensMsg);
                     } else if ("file".equalsIgnoreCase(cmd)) {
-                        handleFileMessage(tokens);
+                        String[] tokensMsg = line.split(" ", 3);
+                        handleFileMessage(tokensMsg);
                     } else if ("users".equalsIgnoreCase(cmd)) {
                         handleUserList(tokens);
                     } else if ("groups".equalsIgnoreCase(cmd)) {
                         handleGroupList(line);
+                    } else if ("response-download".equalsIgnoreCase(cmd)) {
+                        handleReposeDownload(tokens);
                     }
                 }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void handleReposeDownload(String[] tokens) throws IOException {
+        long fileSize = Long.parseLong(tokens[2]);
+        String filePath = tokens[3];
+
+        FileOutputStream fos = new FileOutputStream(filePath);
+
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        long totalBytesRead = 0;
+
+        try {
+            while ((bytesRead = serverIn.read(buffer)) != -1) {
+                totalBytesRead += bytesRead;
+                fos.write(buffer, 0, bytesRead);
+                if (totalBytesRead >= fileSize) {
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        fos.close();
     }
 
     private void handleGroupList(String line) {
@@ -254,7 +282,6 @@ public class ChatClient {
     public void sendFile(String login, File file) throws IOException {
         if (file != null) {
             FileInputStream fis = new FileInputStream(file);
-            BufferedInputStream bis = new BufferedInputStream(fis);
 
             long fileSize = file.length();
 
@@ -263,28 +290,21 @@ public class ChatClient {
 
             byte[] buffer = new byte[4096];
             int bytesRead;
-            while ((bytesRead = bis.read(buffer)) != -1) {
+            while ((bytesRead = fis.read(buffer)) != -1) {
                 serverOut.write(buffer, 0, bytesRead);
-                serverOut.flush();
             }
 
-            bis.close();
-
             serverOut.flush();
+            fis.close();
         }
-    }
-
-    public boolean checkExistFile(String fileName) throws IOException {
-        serverOut.write(("check " + login + " " + fileName).getBytes());
-        String response = bufferedIn.readLine();
-        if (response.equalsIgnoreCase("ok exist")) {
-            return true;
-        }
-        return false;
     }
 
     public void createGroup(String groupName, List<String> users) throws IOException {
         String listUser = String.join(" ", users);
         serverOut.write(("create-group " + groupName + " " + listUser + "\n").getBytes());
+    }
+
+    public void requestDownloadFile(String login, String fileName, String filePath) throws IOException {
+        serverOut.write(("request-download " + login + " " + fileName + " "  + filePath + "\n").getBytes());
     }
 }

@@ -59,7 +59,8 @@ public class MessagePane extends JPanel implements MessageListener {
                 if (result == JFileChooser.APPROVE_OPTION) {
                     File selectedFile = fileChooser.getSelectedFile();
                     try {
-                        listModel.addElement(client.getLogin() + ": " + selectedFile.getName());
+                        String clickableText = "<html>" + client.getLogin() + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + selectedFile.getName() + "</span></html>";
+                        listModel.addElement(clickableText);
                         client.sendFile(login, selectedFile);
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
@@ -87,19 +88,42 @@ public class MessagePane extends JPanel implements MessageListener {
             }
         });
 
-        // Handle file
         messageList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                int index = messageList.locationToIndex(e.getPoint());
-                String selected = listModel.getElementAt(index);
+                if (e.getClickCount() == 2) {
+                    int index = messageList.locationToIndex(e.getPoint());
+                    String selected = listModel.getElementAt(index);
+                    int startIndex = selected.indexOf("<span");
+                    int endIndex = selected.indexOf("</span>", startIndex);
+
+                    if (startIndex != -1 && endIndex != -1) {
+                        String spanContent = selected.substring(startIndex, endIndex);
+                        int closingBracketIndex = spanContent.indexOf(">");
+                        if (closingBracketIndex != -1) {
+                            String fileName = spanContent.substring(closingBracketIndex + 1);
+                            JFileChooser fileChooser = new JFileChooser();
+                            fileChooser.setSelectedFile(new File(fileName));
+                            fileChooser.setVisible(true);
+                            int result = fileChooser.showOpenDialog(MessagePane.this);
+
+                            if (result == JFileChooser.APPROVE_OPTION) {
+                                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                                try {
+                                    client.requestDownloadFile(login, fileName, filePath);
+                                } catch (IOException ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         });
     }
 
     @Override
     public void onMessage(String fromLogin, String msgBody, boolean history, boolean file, String sender) throws IOException {
-        // Check if send to the current user
         if (history) {
             if (login.equalsIgnoreCase(fromLogin)) {
                 String[] msg =  msgBody.split(" ", 2);
@@ -118,15 +142,12 @@ public class MessagePane extends JPanel implements MessageListener {
                 }
                 String line;
                 line = Objects.requireNonNullElse(sender, fromLogin) + ": " + msgBody;
-
                 if (file) {
-                    if (client.checkExistFile(msgBody)) {
-                        String clickableText = "<html>" + fromLogin + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + msgBody + "</span></html>";
-                        SwingUtilities.invokeLater(() -> {
-                            listModel.addElement(clickableText);
-                            messageList.ensureIndexIsVisible(listModel.size() - 1);
-                        });
-                    }
+                    String clickableText = "<html>" + fromLogin + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + msgBody + "</span></html>";
+                    SwingUtilities.invokeLater(() -> {
+                        listModel.addElement(clickableText);
+                        messageList.ensureIndexIsVisible(listModel.size() - 1);
+                    });
                 } else {
                     SwingUtilities.invokeLater(() -> {
                         listModel.addElement(line);
