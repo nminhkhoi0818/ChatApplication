@@ -23,6 +23,8 @@ public class RegisterWindow extends JFrame {
                 try {
                     if(client.register(loginField.getText(), passwordField.getText())) {
                         JOptionPane.showMessageDialog(RegisterWindow.this, "Create account successfully", "Notification", JOptionPane.INFORMATION_MESSAGE);
+                        loginField.setText("");
+                        passwordField.setText("");
                     } else {
                         JOptionPane.showMessageDialog(RegisterWindow.this, "Registration failed", "Notification", JOptionPane.ERROR_MESSAGE);
                     }

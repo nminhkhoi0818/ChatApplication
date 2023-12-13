@@ -17,9 +17,12 @@ public class Server extends Thread {
         return databaseHelper;
     }
 
+    private ServerUI serverUI;
+
     public Server(int serverPort) {
         this.serverPort = serverPort;
         this.databaseHelper = new DatabaseHelper();
+        this.serverUI = new ServerUI();
     }
 
     public List<ServerWorker> getWorkerList() {
@@ -32,8 +35,10 @@ public class Server extends Thread {
             ServerSocket serverSocket = new ServerSocket(serverPort);
             while (true) {
                 System.out.println("About to accept client connection ...");
+                serverUI.showInfo("About to accept client connection ...");
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Accepted connection from " + clientSocket);
+                serverUI.showInfo("Accepted connection from " + clientSocket);
                 ServerWorker worker = new ServerWorker(this, clientSocket);
                 workerList.add(worker);
                 worker.start();

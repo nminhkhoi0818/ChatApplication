@@ -55,13 +55,23 @@ public class UserListPane extends JPanel implements UserStatusListener {
 
     @Override
     public void offline(String login) {
+        System.out.println("Offline");
+        System.out.println(login);
         updateUserStatus(login, false);
     }
 
     private void updateUserStatus(String login, boolean online) {
-        int index = userListModel.indexOf(login);
-        if (index != -1) {
-            userListModel.setElementAt(login + (online ? " (Online)" : " (Offline)"), index);
+        if (online) {
+            int index = userListModel.indexOf(login);
+            if (index != -1) {
+                userListModel.setElementAt(login + " (Online)", index);
+            }
+        }
+        else {
+            int index = userListModel.indexOf(login + " (Online)");
+            if (index != 1) {
+                userListModel.setElementAt(login, index);
+            }
         }
     }
 
@@ -96,8 +106,9 @@ public class UserListPane extends JPanel implements UserStatusListener {
             String login = (String) value;
             if (login.contains("(Online)")) {
                 renderer.setForeground(Color.GREEN);
-            } else if (login.contains("(Offline)")) {
-                renderer.setForeground(Color.RED);
+            }
+            else {
+                renderer.setForeground(Color.BLACK);
             }
             return renderer;
         }

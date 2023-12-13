@@ -26,7 +26,7 @@ public class ChatWindow extends JFrame implements ChatWindowListener {
     ArrayList<MessagePane> messagePanes;
     ArrayList<String> messagePanesList = new ArrayList<>();
 
-    ChatWindow(String login, ChatClient client) throws IOException {
+    ChatWindow(String login, ChatClient client, LoginWindow loginWindow) throws IOException {
         this.client = client;
         this.login = login;
         this.client.addChatWindowListener(this);
@@ -41,6 +41,18 @@ public class ChatWindow extends JFrame implements ChatWindowListener {
         buttonSideBarPanel.add(createGroupButton);
         buttonSideBarPanel.add(logoffButton);
         client.getUsers(login);
+
+        logoffButton.addActionListener((new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    client.logoff();
+                    setVisible(false);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }));
         createGroupButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -141,7 +153,6 @@ public class ChatWindow extends JFrame implements ChatWindowListener {
                     for (String member : members) {
                         line.append(" ").append(member);
                     }
-                    System.out.println(line);
                     chattingWith.setText(String.valueOf(line));
                 } else {
                     chattingWith.setText(login);

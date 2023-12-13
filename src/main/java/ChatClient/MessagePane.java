@@ -23,7 +23,6 @@ public class MessagePane extends JPanel implements MessageListener {
     private DefaultListModel<String> listModel = new DefaultListModel<>();
     private JList<String> messageList = new JList<>(listModel);
     private JTextField inputField = new JTextField();
-    JButton sendButton;
     JButton fileButton;
 
     public String getLogin() {
@@ -41,10 +40,8 @@ public class MessagePane extends JPanel implements MessageListener {
         add(new JScrollPane(messageList), BorderLayout.CENTER);
 
         JPanel inputPanel = new JPanel(new BorderLayout());
-        sendButton = new JButton("Send");
         fileButton = new JButton("File");
         JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
-        buttonPanel.add(sendButton);
         buttonPanel.add(fileButton);
         inputPanel.add(inputField, BorderLayout.CENTER);
         inputPanel.add(buttonPanel, BorderLayout.EAST);

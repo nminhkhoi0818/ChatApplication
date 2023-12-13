@@ -62,12 +62,13 @@ public class LoginWindow extends JFrame {
     private void doLogin() throws IOException {
         String login = loginField.getText();
         String password = passwordField.getText();
-
         if (client.login(login, password)) {
             // Navigate to chat window
-            ChatWindow chatWindow = new ChatWindow(login, client);
+            ChatWindow chatWindow = new ChatWindow(login, client, this);
             client.startMessageReader();
             setVisible(false);
+            loginField.setText("");
+            passwordField.setText("");
         } else {
             JOptionPane.showMessageDialog(this, "Invalid login/password");
         }
