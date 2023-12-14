@@ -15,6 +15,10 @@ public class ServerWorker extends Thread {
     private String login = null;
     private OutputStream outputStream;
 
+    InputStream inputStream;
+
+    BufferedReader reader;
+    DataInputStream fileIn;
     public ServerWorker(Server server, Socket clientSocket) {
         this.server = server;
         this.clientSocket = clientSocket;
@@ -32,10 +36,10 @@ public class ServerWorker extends Thread {
     }
 
     private void handleClientSocket(Socket clientSocket) throws IOException, InterruptedException, SQLException {
-        InputStream inputStream = clientSocket.getInputStream();
         this.outputStream = clientSocket.getOutputStream();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        fileIn = new DataInputStream(clientSocket.getInputStream());
         String line;
         while ((line = reader.readLine()) != null) {
             String[] tokens = line.split(" ");
@@ -62,7 +66,9 @@ public class ServerWorker extends Thread {
                 } else if ("users".equalsIgnoreCase(cmd)) {
                     handleGetAllUsers(tokens);
                 } else if ("file".equalsIgnoreCase(cmd)) {
-                    handleFileMessage(tokens, inputStream);
+//                    System.out.println(Arrays.toString(fileIn.readNBytes(10)));
+//                    System.out.println(Arrays.toString(fileIn.readNBytes(10)));
+                    handleFileMessage(tokens);
                 } else if ("create-group".equalsIgnoreCase(cmd)) {
                     String[] tokenMsg = line.split(" ", 3);
                     handleCreateGroup(tokenMsg);
@@ -81,7 +87,7 @@ public class ServerWorker extends Thread {
         clientSocket.close();
     }
 
-    private void handleRequestDownload(String[] tokens) throws IOException {
+    private void handleRequestDownload(String[] tokens) throws IOException, InterruptedException {
         String sendTo = tokens[1];
         String fileName = tokens[2];
         String filePath = tokens[3];
@@ -95,6 +101,8 @@ public class ServerWorker extends Thread {
                 String outMsg = "response-download " + login + " " + file.length() + " " + filePath + "\n";
                 worker.send(outMsg);
                 worker.outputStream.flush();
+
+                Thread.sleep(1000);
 
                 byte[] buffer = new byte[4096];
                 int bytesRead;
@@ -135,19 +143,23 @@ public class ServerWorker extends Thread {
         server.getDatabaseHelper().createGroup(groupName, groupUsers);
     }
 
-    public void handleFileMessage(String[] tokens, InputStream inputStream) throws IOException {
+    public void handleFileMessage(String[] tokens) throws IOException, InterruptedException {
         String sendTo = tokens[1];
         String fileName = tokens[2];
-        long fileSize = Long.parseLong(tokens[3]);
 
-        FileOutputStream fos = new FileOutputStream(fileName);
+        long fileSize = fileIn.readLong();
 
+        File file = new File(fileName);
+        file.createNewFile();
+        FileOutputStream fos = new FileOutputStream(file);
         byte[] buffer = new byte[4096];
-        int bytesRead;
+
+        int bytesRead = 0;
         long totalBytesRead = 0;
 
         try {
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
+            while ((bytesRead = fileIn.read(buffer, 0, (int) Math.min(buffer.length, fileSize - totalBytesRead))) != -1) {
+                System.out.println(bytesRead);
                 totalBytesRead += bytesRead;
                 fos.write(buffer, 0, bytesRead);
                 if (totalBytesRead >= fileSize) {

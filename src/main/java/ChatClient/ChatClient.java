@@ -279,22 +279,25 @@ public class ChatClient {
         serverOut.write(cmd.getBytes());;
     }
 
-    public void sendFile(String login, File file) throws IOException {
+    public void sendFile(String login, File file) throws IOException, InterruptedException {
         if (file != null) {
             FileInputStream fis = new FileInputStream(file);
+            PrintWriter pr = new PrintWriter(serverOut, true);
+            DataOutputStream dos = new DataOutputStream(serverOut);
 
             long fileSize = file.length();
 
-            serverOut.write(("file " + login + " " + file.getName() + " " + fileSize + "\n").getBytes());
-            serverOut.flush();
+            pr.println(("file " + login + " " + file.getName()));
+            Thread.sleep(1000);
 
+            dos.writeLong(fileSize);
             byte[] buffer = new byte[4096];
             int bytesRead;
             while ((bytesRead = fis.read(buffer)) != -1) {
-                serverOut.write(buffer, 0, bytesRead);
+                dos.write(buffer, 0, bytesRead);
+                dos.flush();
             }
 
-            serverOut.flush();
             fis.close();
         }
     }

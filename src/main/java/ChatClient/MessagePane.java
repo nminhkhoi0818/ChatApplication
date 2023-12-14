@@ -59,7 +59,7 @@ public class MessagePane extends JPanel implements MessageListener {
                         String clickableText = "<html>" + client.getLogin() + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + selectedFile.getName() + "</span></html>";
                         listModel.addElement(clickableText);
                         client.sendFile(login, selectedFile);
-                    } catch (IOException ex) {
+                    } catch (Exception ex) {
                         throw new RuntimeException(ex);
                     }
                 }
