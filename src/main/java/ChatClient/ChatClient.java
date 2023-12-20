@@ -310,4 +310,12 @@ public class ChatClient {
     public void requestDownloadFile(String login, String fileName, String filePath) throws IOException {
         serverOut.write(("request-download " + login + " " + fileName + " "  + filePath + "\n").getBytes());
     }
+
+    public void deleteMessage(int id) throws IOException {
+        serverOut.write(("delete-message " + id + "\n").getBytes());
+    }
+
+    public void deleteGroupMessage(int id) throws IOException {
+        serverOut.write(("delete-group-message " + id + "\n").getBytes());
+    }
 }

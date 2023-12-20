@@ -20,8 +20,8 @@ public class MessagePane extends JPanel implements MessageListener {
         return members;
     }
 
-    private DefaultListModel<String> listModel = new DefaultListModel<>();
-    private JList<String> messageList = new JList<>(listModel);
+    private DefaultListModel<Message> listModel = new DefaultListModel<>();
+    private JList<Message> messageList = new JList<>(listModel);
     private JTextField inputField = new JTextField();
     JButton fileButton;
 
@@ -42,7 +42,9 @@ public class MessagePane extends JPanel implements MessageListener {
         JPanel inputPanel = new JPanel(new BorderLayout());
         fileButton = new JButton("File");
         JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
+        JButton refreshButton = new JButton("Refresh");
         buttonPanel.add(fileButton);
+        buttonPanel.add(refreshButton);
         inputPanel.add(inputField, BorderLayout.CENTER);
         inputPanel.add(buttonPanel, BorderLayout.EAST);
         add(inputPanel, BorderLayout.SOUTH);
@@ -57,7 +59,7 @@ public class MessagePane extends JPanel implements MessageListener {
                     File selectedFile = fileChooser.getSelectedFile();
                     try {
                         String clickableText = "<html>" + client.getLogin() + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + selectedFile.getName() + "</span></html>";
-                        listModel.addElement(clickableText);
+                        listModel.addElement(new Message(0, clickableText));
                         client.sendFile(login, selectedFile);
                     } catch (Exception ex) {
                         throw new RuntimeException(ex);
@@ -76,7 +78,7 @@ public class MessagePane extends JPanel implements MessageListener {
                         } else {
                             client.msg(login, text);
                         }
-                        listModel.addElement(client.getLogin() + ": " + text);
+                         listModel.addElement(new Message(0, client.getLogin() + ": " + text));
                         inputField.setText("");
                     }
                 } catch (IOException ex) {
@@ -85,17 +87,30 @@ public class MessagePane extends JPanel implements MessageListener {
             }
         });
 
+        refreshButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                listModel.clear();
+                try {
+                    client.getMessageHistory(client.getLogin(), login, (members != null));
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+
+
         messageList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
                     int index = messageList.locationToIndex(e.getPoint());
-                    String selected = listModel.getElementAt(index);
-                    int startIndex = selected.indexOf("<span");
-                    int endIndex = selected.indexOf("</span>", startIndex);
+                    Message selected = listModel.getElementAt(index);
+                    int startIndex = selected.getContent().indexOf("<span");
+                    int endIndex = selected.getContent().indexOf("</span>", startIndex);
 
                     if (startIndex != -1 && endIndex != -1) {
-                        String spanContent = selected.substring(startIndex, endIndex);
+                        String spanContent = selected.getContent().substring(startIndex, endIndex);
                         int closingBracketIndex = spanContent.indexOf(">");
                         if (closingBracketIndex != -1) {
                             String fileName = spanContent.substring(closingBracketIndex + 1);
@@ -115,6 +130,29 @@ public class MessagePane extends JPanel implements MessageListener {
                         }
                     }
                 }
+                if (e.getButton() == MouseEvent.BUTTON3) {
+                    int index = messageList.locationToIndex(e.getPoint());
+                    Message selectedMessage = listModel.getElementAt(index);
+
+                    int option = JOptionPane.showConfirmDialog(
+                            MessagePane.this,
+                            "Are you sure you want to delete this message?",
+                            "Delete Confirmation",
+                            JOptionPane.YES_NO_OPTION);
+
+                    if (option == JOptionPane.YES_OPTION && selectedMessage.getId() != 0) {
+                        listModel.remove(index);
+                        try {
+                            if (members != null) {
+                                client.deleteGroupMessage(selectedMessage.getId());
+                            } else {
+                                client.deleteMessage(selectedMessage.getId());
+                            }
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                }
             }
         });
     }
@@ -123,11 +161,12 @@ public class MessagePane extends JPanel implements MessageListener {
     public void onMessage(String fromLogin, String msgBody, boolean history, boolean file, String sender) throws IOException {
         if (history) {
             if (login.equalsIgnoreCase(fromLogin)) {
-                String[] msg =  msgBody.split(" ", 2);
-                String line = msg[0] + ": " + msg[1];
+                String[] msg =  msgBody.split(" ", 3);
+                Integer messageId = Integer.valueOf(msg[0]);
+                String line = msg[1] + ": " + msg[2];
 
                 SwingUtilities.invokeLater(() -> {
-                    listModel.addElement(line);
+                    listModel.addElement(new Message(messageId, line));
                     messageList.ensureIndexIsVisible(listModel.size() - 1);
                 });
             }
@@ -142,12 +181,12 @@ public class MessagePane extends JPanel implements MessageListener {
                 if (file) {
                     String clickableText = "<html>" + fromLogin + ": " + "<span style='color: blue; text-decoration: underline; cursor: pointer;'>" + msgBody + "</span></html>";
                     SwingUtilities.invokeLater(() -> {
-                        listModel.addElement(clickableText);
+                        listModel.addElement(new Message(0, clickableText));
                         messageList.ensureIndexIsVisible(listModel.size() - 1);
                     });
                 } else {
                     SwingUtilities.invokeLater(() -> {
-                        listModel.addElement(line);
+                        listModel.addElement(new Message(0, line));
                         messageList.ensureIndexIsVisible(listModel.size() - 1);
                     });
                 }

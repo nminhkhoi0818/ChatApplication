@@ -66,8 +66,6 @@ public class ServerWorker extends Thread {
                 } else if ("users".equalsIgnoreCase(cmd)) {
                     handleGetAllUsers(tokens);
                 } else if ("file".equalsIgnoreCase(cmd)) {
-//                    System.out.println(Arrays.toString(fileIn.readNBytes(10)));
-//                    System.out.println(Arrays.toString(fileIn.readNBytes(10)));
                     handleFileMessage(tokens);
                 } else if ("create-group".equalsIgnoreCase(cmd)) {
                     String[] tokenMsg = line.split(" ", 3);
@@ -77,6 +75,10 @@ public class ServerWorker extends Thread {
                 } else if ("request-download".equalsIgnoreCase(cmd)) {
                     String[] tokenDownload = line.split(" ", 4);
                     handleRequestDownload(tokenDownload);
+                } else if ("delete-message".equalsIgnoreCase(cmd)) {
+                    handleDeleteMessage(tokens);
+                } else if ("delete-group-message".equalsIgnoreCase(cmd)) {
+                    handleDeleteGroupMessage(tokens);
                 }
                 else {
                     String msg = "unknown " + cmd + "\n";
@@ -85,6 +87,14 @@ public class ServerWorker extends Thread {
             }
         }
         clientSocket.close();
+    }
+
+    private void handleDeleteGroupMessage(String[] tokens) {
+        server.getDatabaseHelper().deleteGroupMessage(Integer.parseInt(tokens[1]));
+    }
+
+    private void handleDeleteMessage(String[] tokens) {
+        server.getDatabaseHelper().deleteMessage(Integer.parseInt(tokens[1]));
     }
 
     private void handleRequestDownload(String[] tokens) throws IOException, InterruptedException {
@@ -184,12 +194,11 @@ public class ServerWorker extends Thread {
     private void handleMessage(String[] tokens) throws IOException {
         String sendTo = tokens[1];
         String body = tokens[2];
-
         List<ServerWorker> workerList = server.getWorkerList();
         server.getDatabaseHelper().insertMessage(login, sendTo, body);
         for (ServerWorker worker : workerList) {
             if (sendTo.equalsIgnoreCase(worker.getLogin())) {
-                String outMsg = "msg " + login + " " + body + "\n";
+                String outMsg = "msg " + login + " " +  body + "\n";
                 worker.send(outMsg);
             }
         }
@@ -300,6 +309,7 @@ public class ServerWorker extends Thread {
         String sender = tokens[1];
         String groupName = tokens[2];
         List<String> chatHistory = server.getDatabaseHelper().getGroupMessages(groupName);
+
         List<ServerWorker> workerList = server.getWorkerList();
         for (ServerWorker worker : workerList) {
             if (sender.equalsIgnoreCase(worker.getLogin())) {

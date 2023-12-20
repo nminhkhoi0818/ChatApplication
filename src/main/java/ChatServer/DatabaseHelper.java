@@ -66,8 +66,9 @@ public class DatabaseHelper {
         }
     }
 
-    public void insertMessage(String sender, String receiver, String message) {
+    public Integer insertMessage(String sender, String receiver, String message) {
         String sql = "INSERT INTO messages (sender, receiver, message) VALUES (?, ?, ?)";
+        int messageId = -1;
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, sender);
             pstmt.setString(2, receiver);
@@ -76,6 +77,8 @@ public class DatabaseHelper {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+        return messageId;
     }
 
     public List<String> getChatHistory(String sender, String receiver) {
@@ -88,12 +91,13 @@ public class DatabaseHelper {
             pstmt.setString(4, sender);
             try (ResultSet resultSet = pstmt.executeQuery()) {
                 while (resultSet.next()) {
+                    int messageId = resultSet.getInt("id");
                     String timestamp = resultSet.getString("timestamp");
                     String messageSender = resultSet.getString("sender");
                     String messageReceiver = resultSet.getString("receiver");
                     String messageBody = resultSet.getString("message");
 
-                    String formattedMessage = String.format("%s %s", messageSender, messageBody);
+                    String formattedMessage = String.format("%d %s %s", messageId, messageSender, messageBody);
                     messages.add(formattedMessage);
                 }
             }
@@ -268,22 +272,31 @@ public class DatabaseHelper {
             System.out.println("Group not found.");
             return messages;
         }
-        // Updated SQL query to join with the users table and get the username
-        String sql = "SELECT users.username, group_messages.message FROM group_messages " +
+        String sql = "SELECT users.username, group_messages.message, group_messages.id FROM group_messages " +
                 "INNER JOIN users ON group_messages.sender_id = users.id " +
                 "WHERE group_messages.group_id = ? ORDER BY group_messages.timestamp ASC";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setInt(1, groupId);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
+                int messageId = rs.getInt("id");
                 String username = rs.getString("username");
                 String message = rs.getString("message");
-                messages.add(username + " " + message);
+                messages.add(messageId + " " + username + " " + message);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return messages;
+    }
+    public void deleteGroupMessage(int messageId) {
+        String sql = "DELETE FROM group_messages WHERE id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, messageId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
     public void createGroupChatTables() {
         String createGroupsTable = "CREATE TABLE IF NOT EXISTS groups (" +
@@ -311,6 +324,16 @@ public class DatabaseHelper {
             stmt.execute(createGroupMembersTable);
             stmt.execute(createGroupMessagesTable);
             System.out.println("Group chat tables created successfully");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteMessage(int messageId) {
+        String sql = "DELETE FROM messages WHERE id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, messageId);
+            pstmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
