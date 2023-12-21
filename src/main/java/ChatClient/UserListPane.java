@@ -1,5 +1,4 @@
 package ChatClient;
-import com.sun.source.doctree.SeeTree;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,6 +16,12 @@ public class UserListPane extends JPanel implements UserStatusListener {
     private DefaultListModel<String> userListModel;
     private ChatWindow chatWindow;
     private List<String> onlineUsers;
+
+    private Set<String> userOnly = new HashSet<>();
+
+    public Set<String> getUserOnly() {
+        return userOnly;
+    }
 
     public UserListPane(ChatClient client, ChatWindow chatWindow) throws IOException {
         this.client = client;
@@ -55,8 +60,6 @@ public class UserListPane extends JPanel implements UserStatusListener {
 
     @Override
     public void offline(String login) {
-        System.out.println("Offline");
-        System.out.println(login);
         updateUserStatus(login, false);
     }
 
@@ -76,10 +79,13 @@ public class UserListPane extends JPanel implements UserStatusListener {
     }
 
     @Override
-    public void addUser(String login) {
+    public void addUser(String login, boolean group) {
         if (!login.equalsIgnoreCase(client.getLogin()) && !userListModel.contains(login) && !setUser.contains(login)) {
             setUser.add(login);
             userListModel.addElement(login);
+            if (!group) {
+                userOnly.add(login);
+            }
         }
         if (!onlineUsers.isEmpty() && onlineUsers.contains(login)) {
             updateUserStatus(login, true);

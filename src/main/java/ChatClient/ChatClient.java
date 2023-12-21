@@ -163,7 +163,7 @@ public class ChatClient {
                     String[] members = Arrays.copyOfRange(groupInfo[i].split(" "), 2, groupInfo[i].split(" ").length);
                     if (Arrays.asList(members).contains(login)) {
                         for (UserStatusListener listener : userStatusListeners) {
-                            listener.addUser(groupInfo[i].split(" ")[1]);
+                            listener.addUser(groupInfo[i].split(" ")[1], true);
                         }
                         for (ChatWindowListener listener : chatWindowListeners) {
                             listener.addUser(groupInfo[i].split(" ")[1], members);
@@ -178,7 +178,7 @@ public class ChatClient {
         if (tokens.length > 1) {
             for (int i = 2; i < tokens.length; i++) {
                 for (UserStatusListener listener : userStatusListeners) {
-                    listener.addUser(tokens[i]);
+                    listener.addUser(tokens[i], false);
                 }
                 for (ChatWindowListener listener : chatWindowListeners) {
                     listener.addUser(tokens[i], null);

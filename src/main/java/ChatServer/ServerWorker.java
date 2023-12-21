@@ -151,6 +151,7 @@ public class ServerWorker extends Thread {
         String groupName = tokens[1];
         List<String> groupUsers = Arrays.asList(tokens[2].split(" "));
         server.getDatabaseHelper().createGroup(groupName, groupUsers);
+
     }
 
     public void handleFileMessage(String[] tokens) throws IOException, InterruptedException {
@@ -252,7 +253,7 @@ public class ServerWorker extends Thread {
                     }
                 }
             } else {
-                String msg = "error login";
+                String msg = "error login\n";
                 outputStream.write(msg.getBytes());
                 System.err.println("Login failed for " + login);
             }

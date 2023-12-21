@@ -13,6 +13,7 @@ public class DatabaseHelper {
             connection = DriverManager.getConnection("jdbc:postgresql://dpg-clfb5hdadtrs73eajc20-a.oregon-postgres.render.com/week8db?user=nmkhoi&password=FZZq1J7lSVc8xatyiMJohFh4mOi6NeLV");
             createUsersTable();
             createTable();
+            createGroupChatTables();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -359,10 +360,29 @@ public class DatabaseHelper {
         }
     }
 
+    public void dropAllTables() {
+        try (Statement stmt = connection.createStatement()) {
+            String dropMessagesTable = "DROP TABLE IF EXISTS messages";
+            String dropUsersTable = "DROP TABLE IF EXISTS users";
+            String dropGroupsTable = "DROP TABLE IF EXISTS groups";
+            String dropGroupMembersTable = "DROP TABLE IF EXISTS group_members";
+            String dropGroupMessagesTable = "DROP TABLE IF EXISTS group_messages";
+
+            stmt.addBatch(dropGroupMessagesTable);
+            stmt.addBatch(dropGroupMembersTable);
+            stmt.addBatch(dropGroupsTable);
+            stmt.addBatch(dropUsersTable);
+            stmt.addBatch(dropMessagesTable);
+
+            stmt.executeBatch();
+            System.out.println("All tables dropped successfully.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String args[]) {
         DatabaseHelper databaseHelper = new DatabaseHelper();
-        databaseHelper.clearTableData("messages");
-        databaseHelper.clearTableData("groups");
-        databaseHelper.createGroupChatTables();
+        databaseHelper.dropAllTables();
     }
 }

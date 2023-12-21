@@ -77,12 +77,15 @@ public class ChatWindow extends JFrame implements ChatWindowListener {
                 centerPanel.add(groupNameLabel);
                 centerPanel.add(groupNameField);
 
-
                 centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
                 chooseUserContent.add(centerPanel, BorderLayout.CENTER);
 
                 JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
                 JButton createButton = new JButton("Create group");
+                listModel.addElement(login);
+                for (String user : userListPane.getUserOnly()) {
+                    listModel.addElement(user);
+                }
                 createButton.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
@@ -98,6 +101,17 @@ public class ChatWindow extends JFrame implements ChatWindowListener {
                         try {
                             client.createGroup(groupName, chosenUsers);
                             userListPane.addGroup(groupName);
+                            boolean firstUser = true;
+                            String temp = " ";
+                            for (String user : chosenUsers) {
+                                if (firstUser) {
+                                    firstUser = false;
+                                    temp += user;
+                                } else {
+                                    temp += " " + user;
+                                }
+                            }
+                            addUser(groupName, temp.split(" "));
                         } catch (IOException ex) {
                             throw new RuntimeException(ex);
                         }
